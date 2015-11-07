@@ -10,7 +10,7 @@
 
 static char b64_table[B64_NUM_SYMBOLS];
 static char initialized = false;
-
+// code taken from class notes
 static void init_table(){
   
   int i;
@@ -24,6 +24,7 @@ static void init_table(){
   initialized = true;
 }
 
+// code taken from class notes
 char * encode(uint8_t * data, int length){
   
   //int i;
@@ -52,11 +53,7 @@ char * encode(uint8_t * data, int length){
     
     for (int ii = 18; ii >= 0; ii-=6){
       uint32_t idx = (block >> ii) & coder;
-      if (previous == 'A' && b64_table[idx] == 'A'){
-	//ptr--;
-	break;
-      }
-      previous = *ptr++ = b64_table[idx];
+      *ptr++ = b64_table[idx];
     }
   }
   
@@ -66,6 +63,16 @@ char * encode(uint8_t * data, int length){
   
   free(padded);
   return encoded;
+}
+
+static int getIndex(char symbol){
+  
+  if (!initialized)
+    init_table;
+
+  for (int i = 0; i < B64_NUM_SYMBOLS; i++)
+    if (symbol == b64_table[i]) return i;
+  return -1;
 }
   
 uint8_t * decode(char * coded){
@@ -79,10 +86,10 @@ uint8_t * decode(char * coded){
   uint8_t *ptr = data;
   for (int i = 0; i < len; i+= 4){
     
-    uint8_t block = ((uint32_t)coded[i] << 18 |
-		     (uint32_t)coded[i+1] << 12 |
-		     (uint32_t)coded[i+2] << 6 |
-		     (uint32_t)coded[i+3]);
+    uint32_t block = ((uint32_t)getIndex(coded[i]) << 18 |
+		      (uint32_t)getIndex(coded[i+1]) << 12 |
+		      (uint32_t)getIndex(coded[i+2]) << 6 |
+		      (uint32_t)getIndex(coded[i+3]));
     
     *ptr++= (block >> 16) & decoder;
     *ptr++ = (block >> 8) & decoder;
@@ -94,13 +101,13 @@ uint8_t * decode(char * coded){
 
 int main(void){
   
-  char * message = "1234";
-  int length = 4;
+  uint8_t message[] = {1,2,3,4,5};
+  int length = 5;
   char * coded = encode(message, length);
   char * decoded = decode(coded);
   
   printf("%s\n", coded);
   for (int i = 0; i < length; i++)
-    printf("%d\n", decoded[i]);
+    printf("%c\n", decoded[i]);
  
 }
