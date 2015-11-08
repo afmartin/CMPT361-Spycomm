@@ -101,7 +101,7 @@ uint8_t * decode(char * coded){
 
 int main(void){
   
-  uint8_t message[] = {1,2,3,4,5};
+  char *  message = "hello";
   int length = 5;
   char * coded = encode(message, length);
   char * decoded = decode(coded);
