@@ -59,7 +59,7 @@ int getSocket(char* port) {
     exit(1);
   }
 
-  for (i = res; i = i->ai_next) {
+  for (i = res; i;  i = i->ai_next) {
     sd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 
     if (sd == -1) {
@@ -140,7 +140,7 @@ int acceptCon(int socket) {
   return cd;
 }
 
-void *worker(cd) {
+void *worker(int cd) { //this is the function that threads will call
   clientInfo *info = malloc(sieof(info));
   if (info == NULL) {
     fprintf(stderr, "Memory allocation failure\n");
