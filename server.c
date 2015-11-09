@@ -20,8 +20,14 @@ Description:
 
 #include "server.h"
 
+#define MAX_CONNECTIONS 10
 #define DEFAULT_PORT "36115" // This can change and should be in our protocol
+#define T_TYPE 'T'
+#define F_TYPE 'F'
+#define E_TYPE 'E'
+#define D_TYPE 'D'
 
+#define BUFSIZE 4
 
 void printUsage(char* name) {
   fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
@@ -30,6 +36,69 @@ void printUsage(char* name) {
 	  "the port number to be used. Default port number is 36115\n");
 }
 
+int getSocket(char* port) {
+  struct addrinfo *res, *i;
+  struct addrinfo hints;
+
+  int num; /* variable to check the return value of getaddrinfo */
+  int sd; /* variable for the socket descriptor */
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_flags = AI_PASSIVE | AI_V4MAPPED;
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_STREAM;
+  num = getaddrinfo(NULL, port, &hints, &res);
+  if (num != 0) {
+    fprintf(stderr, "Error: %s\n", gai_strerror(num));
+    exit(1);
+  }
+
+  for (i = res; i = i->ai_next) {
+    sd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
+
+    if (sd == -1) {
+      fprintf(stderr, "Error creating socket\n");
+      exit(1);
+    }
+
+    /* bind port to socket */
+    num = bind(sd, i->ai_addr, i->ai_addrlen);
+    if (num == -1) {
+      fprintf(stderr, "Error binding port to socket\n");
+      close(sd);
+      exit(1);
+    }
+
+    /* listen for incoming connections */
+    num = listen(sd, MAX_CONNECTIONS);
+    if (num == -1) {
+      fprintf(stderr, "Error listening for incomign connections\n");
+      close(sd);
+      exit(1);
+    }
+
+    break;
+  }
+  freeaddrinfo(res);
+  return sd;
+}
+
+int initConnection(int socket, struct sockaddr_storage* client) {
+  socklen_t clientAddrLen = sizeof(*client);
+  int cd;
+  uint8_t buf[BUFSIZE];
+  uint8_t msg[BUFSIZE];
+
+  cd = accept(socket, (struct sockaddr *) client, &clientAddrLen);
+  if (cd == -1) {
+    fprintf(stderr, "Error accepting connections..\n");
+    exit(1);
+  }
+
+  /*if (read(cd, */
+
+  
+}
 int acceptCon(int socket) {
   /* Handles client requests */
 
