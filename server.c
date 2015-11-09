@@ -29,6 +29,12 @@ Description:
 
 #define BUFSIZE 4
 
+typedef struct fileInfo {
+  char filename[64];
+  int fileLen;
+  int padID;
+} clientInfo;
+
 void printUsage(char* name) {
   fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
   fprintf(stdout, "       h: displays file usage information\n");
@@ -83,46 +89,75 @@ int getSocket(char* port) {
   return sd;
 }
 
-int initConnection(int socket, struct sockaddr_storage* client) {
-  socklen_t clientAddrLen = sizeof(*client);
-  int cd;
+int getPadOffset(int padID) {
+  /*takes padID as input, returns 0 if successful,
+    otherwise returns the numbers we have for error
+    codes in the protocol */
+}
+
+int initConnection(int cd, clientInfo *info) {
+  //takes client descriptor and struct clientInfo as parameters
   uint8_t buf[BUFSIZE];
   uint8_t msg[BUFSIZE];
-
-  cd = accept(socket, (struct sockaddr *) client, &clientAddrLen);
-  if (cd == -1) {
-    fprintf(stderr, "Error accepting connections..\n");
+  clientInfo info;
+  
+  if (read(cd, buf, BUFSIZE) == -1) {
+    fprintf(stderr, "Error in read\n");
     exit(1);
   }
 
-  /*if (read(cd, */
-
+  if (buf[0] == T_TYPE) {
+    info->filename = buf[1];
+    info->fileLen = buf[2];
+    info->padID = buf[3];
+  }
   
+  msg[0] = T_TYPE;
+  if ((msg[1] = getPadOffset(info->padID)) != 0) {
+    msg[0] = E_TYPE;
+  }
+  
+  if (write(cd, msg, BUFSIZE) == -1) {
+    fprintf(stderr, "Error in write\n");
+    exit(1);
+  } 
+  return 0;
 }
+
 int acceptCon(int socket) {
-  /* Handles client requests */
+  /* Handles client requests 
+     will be updated to support Port Knocking */
 
   struct sockaddr_storage clientAddr;
   socklen_t clientAddrLen = sizeof(clientAddr);
   int cd;
-  pthread_t tid;
 
   cd = accept(socket, (struct sockaddr *) &clientAddr, &clientAddrLen);
   if (cd == -1) {
     fprintf(stderr, "Error accepting connections\n");
     exit(1);
   }
+  return cd;
+}
 
-  //pthread_create(&tid, NULL, function that handles decrypt->decode, 
-  //func parameters);
-//pthread_join(tid, NULL);
+void *worker(cd) {
+  clientInfo *info = malloc(sieof(info));
+  if (info == NULL) {
+    fprintf(stderr, "Memory allocation failure\n");
+    exit(1);
+  }
 
-  return 0;
+  initConnection(cd, &info);
+  //Function that actually transfers the file
+  free(info);
+  return NULL;
 }
 
 int main(int argc, char* argv[]) {
-  int opt, sd;
+  int opt, sd, cd;
   char *port = DEFAULT_PORT;
+  pthread_t tid; 
+
   
   while (opt = getopt(argc, argv, "hp:") != -1) {
 
@@ -141,10 +176,12 @@ int main(int argc, char* argv[]) {
       printf("Invalid parameter\n");
     }
   }
-
-  //sd = getSocket(port); This should be in netCode.h
-  //acceptCon(sd);
-  
+  //threading goes here
+  sd = getSocket(port); //This should be in netCode.h
+  cd = acceptCon(sd);
+  pthread_create(&tid, NULL, worker, &cd);
+  pthread_join(tid, NULL);
+  /*the above 4 lines should continue forever. While(1) or While(1) and Select? */
   return 0;
 }
   
