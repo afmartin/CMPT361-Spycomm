@@ -1,19 +1,26 @@
 
-
-#define NYT '\0'
-
-typedef struct Tree{
+typedef struct _TreeNode{
   
-  int weight;
-  int isLeaf;
-  struct Tree * left;
-  struct Tree * right;
-  struct Tree * parent;
+  char symbol;
+  struct _TreeNode * left;
+  struct _TreeNode * right;
 
-} ;
+} node;
 
-int initTree();
-int updateTree();
+typedef struct letterFrequencies{
+  
+  char symbol;
+  int freq;
+  struct letterFrequencies * next;
+
+} frequencyTable;
+
+
+
+frequencyTable *  findFrequencies(char * string);
+void traverseFreqTable(frequencyTable ** table);
+
+node * initTree(frequencyTable ** table);
 int findEqualWeight();
 int traverse(); // for testing 
 int encodeChar();
