@@ -1,6 +1,3 @@
-
-typedef int make_iso_compilers_happy;
-=======
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +42,7 @@ void traverseFreqTable(frequencyTable ** table){
   
 }
 
-int main(void){
+/* int main(void){
   
   frequencyTable ** table;
   char * string = "hello world";
@@ -53,5 +50,5 @@ int main(void){
   traverseFreqTable(table);
   
   return 0;
-}
+} */
 

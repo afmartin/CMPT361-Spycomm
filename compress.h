@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-/*
-
-VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
-
-*/
-
-
-typedef int make_iso_compilers_happy;
-=======
-
 typedef struct _TreeNode{
   
   char symbol;
@@ -37,4 +26,3 @@ int encodeChar();
 int findByCode();
 int swap();
 int increaseWeight();
->>>>>>> john
