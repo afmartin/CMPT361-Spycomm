@@ -12,28 +12,38 @@ Description:
 #include <pthread.h>
 #include <stdlib.h>
 #include <getopt.h>
-
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
 #include "server.h"
 
+#define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36115" // This can change and should be in our protocol
+#define DEFAULT_PORT "36215" // This can change and should be in our protocol
 #define T_TYPE 'T'
 #define F_TYPE 'F'
 #define E_TYPE 'E'
 #define D_TYPE 'D'
 
-#define BUFSIZE 4
+#define MAX_THREAD 10
+#define TRUE 1
+#define FALSE 0
+#define MAXLEN 33
+#define MAX_FILE_NAME 64
 
-typedef struct fileInfo {
-  char filename[64];
+/* typedef struct _threadArgs{ */
+  
+/*   int sockfd; */
+/*   fileInfo info; */
+/* } threadArgs; */
+
+typedef struct _fileInfo {
+  char filename[MAX_FILE_NAME];
+  char padID[MAXLEN];
   int fileLen;
-  int padID;
-} clientInfo;
+} fileInfo;
 
 void printUsage(char* name) {
   fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
@@ -64,65 +74,107 @@ int getSocket(char* port) {
 
     if (sd == -1) {
       fprintf(stderr, "Error creating socket\n");
-      exit(1);
+      continue;
     }
 
     /* bind port to socket */
     num = bind(sd, i->ai_addr, i->ai_addrlen);
     if (num == -1) {
       fprintf(stderr, "Error binding port to socket\n");
-      close(sd);
-      exit(1);
+      continue;
     }
 
     /* listen for incoming connections */
     num = listen(sd, MAX_CONNECTIONS);
     if (num == -1) {
       fprintf(stderr, "Error listening for incomign connections\n");
-      close(sd);
-      exit(1);
+      continue;
     }
 
     break;
+  }
+  if (num == -1 || sd == -1){
+    fprintf(stderr, "Could not form a socket\n");
+    freeaddrinfo(res);
+    exit (1);
   }
   freeaddrinfo(res);
   return sd;
 }
 
 int getPadOffset(int padID) {
+
+  return 0;
   /*takes padID as input, returns 0 if successful,
     otherwise returns the numbers we have for error
     codes in the protocol */
 }
 
-int initConnection(int cd, clientInfo *info) {
-  //takes client descriptor and struct clientInfo as parameters
-  uint8_t buf[BUFSIZE];
-  uint8_t msg[BUFSIZE];
-  clientInfo info;
+// function to send a string over a socket descriptor
+int send_string(int sd, uint8_t * buf){
   
-  if (read(cd, buf, BUFSIZE) == -1) {
+  size_t queued = MAXLEN;
+  ssize_t sent;
+  while (queued > 0){
+    sent = send(sd, buf, queued, 0);
+    if (sent == -1)
+      return FALSE;
+    queued -= sent;
+    buf += sent;
+  }
+  return TRUE;
+}
+
+int initFileTransfer(int cd, fileInfo *info) {
+  
+  //takes client descriptor and struct clientInfo as parameters
+  uint8_t buf[MAXLEN];
+  uint8_t * ptr = buf+1;
+  uint8_t msg[MAXLEN];
+  
+  if (recv(cd, buf, MAXLEN, 0) == -1) {
     fprintf(stderr, "Error in read\n");
     exit(1);
   }
 
   if (buf[0] == T_TYPE) {
-    info->filename = buf[1];
-    info->fileLen = buf[2];
-    info->padID = buf[3];
+    int position = 0;
+    
+    // copy filename into struct 
+    while (*ptr != '|') info->filename[position++] = *ptr++;    
+    info->filename[position] = '\0'; 
+    ptr++;
+    position = 0;
+    // copy padID into struct
+    while (*ptr != '|') info->padID[position++] = *ptr++;
+    info->padID[position] = '\0';
+    ptr++;
+    info->fileLen = *ptr++; // set the first digit of len 
+    DONE;
+    // continue adding digits to fileLen
+    while (*ptr != '|'){
+      info->fileLen =  info->fileLen * 10 + *ptr++;
+      //printf("%c\n", *ptr);
+    }
+    printf("%s -- %s -- %d", info->filename, info->padID, info->fileLen);
   }
+  else return FALSE;
   
   msg[0] = T_TYPE;
-  if ((msg[1] = getPadOffset(info->padID)) != 0) {
+  // save for later -->
+  /*if ((msg[1] = getPadOffset(info->padID)) != 0) {
     msg[0] = E_TYPE;
-  }
+    }*/  
+  msg[1] = '\0';
   
-  if (write(cd, msg, BUFSIZE) == -1) {
-    fprintf(stderr, "Error in write\n");
-    exit(1);
+  
+  if (!send_string(cd, msg)) {
+    fprintf(stderr, "Error sending response\n");
   } 
-  return 0;
+  return TRUE;
 }
+
+
 
 int acceptCon(int socket) {
   /* Handles client requests 
@@ -140,26 +192,52 @@ int acceptCon(int socket) {
   return cd;
 }
 
-void *worker(int cd) { //this is the function that threads will call
-  clientInfo *info = malloc(sieof(info));
+void* worker(void * arg) { //this is the function that threads will call
+  
+  int done = 0;
+  int * cd = (int *) arg;
+  uint8_t packet[MAXLEN];
+  size_t len = MAXLEN;
+  ssize_t received;
+  fileInfo *info = malloc(sizeof(info));
   if (info == NULL) {
     fprintf(stderr, "Memory allocation failure\n");
     exit(1);
   }
 
-  initConnection(cd, &info);
+  if (initFileTransfer(*cd, info)){
+    //DONE;
+    uint8_t * fileContents; //+1 to allow for null term
+    printf("%d\n", (*info).fileLen);
+    fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
+    //DONE;
+    uint8_t * ptr = fileContents; // set pointer to start of fileContents
+    while(!done){
+      received = recv(*cd, packet, len, 0);
+      //DONE;
+      if(packet[0] == 'D'){ // check if client is finished sending
+	done = 1;
+	break;
+      }
+      for (int i = 1; i < received; i++)
+	*ptr++ = packet[i]; // set 
+    }
+    if (done){} // output to file
+  }
+      
   //Function that actually transfers the file
   free(info);
   return NULL;
 }
 
 int main(int argc, char* argv[]) {
+  
   int opt, sd, cd;
   char *port = DEFAULT_PORT;
   pthread_t tid; 
 
   
-  while (opt = getopt(argc, argv, "hp:") != -1) {
+  while ((opt = getopt(argc, argv, "hp:")) != -1) {
 
     switch(opt) {
     /* Reference used from www.gnu.org/software/libc/manual/html_node/Example-of                                   
@@ -176,12 +254,14 @@ int main(int argc, char* argv[]) {
       printf("Invalid parameter\n");
     }
   }
-  //threading goes here
-  sd = getSocket(port); //This should be in netCode.h
-  cd = acceptCon(sd);
-  pthread_create(&tid, NULL, worker, &cd);
-  pthread_join(tid, NULL);
-  /*the above 4 lines should continue forever. While(1) or While(1) and Select? */
+  
+  while (TRUE){
+    //threading goes here
+    sd = getSocket(port); //This should be in netCode.h
+    cd = acceptCon(sd);    
+    pthread_create(&tid, NULL, worker, &cd);
+    pthread_join(tid, NULL);
+  }
   return 0;
 }
   
