@@ -25,6 +25,10 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 //Maybe this could be in user.c?
 #define DEFAULT_PORT "36115"
 
+#define T_TYPE 'T'
+#define F_TYPE 'F'
+
+
 struct commandLine {
 	char * address;
 	char * ports;
@@ -139,6 +143,29 @@ int connectTo (int sock, struct addrinfo * info){
 	
 	return sock;
 }
+
+int sendAll(int sock, uint8_t * buffer, int  * len){
+	
+	int sent = 0;
+	int left = *len;
+	int ret;
+	
+	while (sent < *len){
+		ret = send(sock, buffer + sent, left, 0);
+		if (ret == -1){ return -1; }
+		sent += ret;
+		left -= ret;
+	}
+	
+	*len = sent;
+	
+	return 0;
+}
+
+/* int initiateFileTransfer(int sock){
+	
+	ma
+} */
 
 int main (int argc, char * argv[]){
 
