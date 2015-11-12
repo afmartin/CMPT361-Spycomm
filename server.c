@@ -129,7 +129,7 @@ int initFileTransfer(int cd, fileInfo *info) {
   
   //takes client descriptor and struct clientInfo as parameters
   uint8_t buf[MAXLEN];
-  uint8_t * ptr = buf;
+  uint8_t * ptr = buf+1;
   uint8_t msg[MAXLEN];
   
   if (recv(cd, buf, MAXLEN, 0) == -1) {
@@ -143,12 +143,12 @@ int initFileTransfer(int cd, fileInfo *info) {
     // copy filename into struct 
     while (*ptr != '|') info->filename[position++] = *ptr++;    
     info->filename[position] = '\0'; 
-    ptr+=2;
+    ptr++;
     position = 0;
     // copy padID into struct
     while (*ptr != '|') info->padID[position++] = *ptr++;
     info->padID[position] = '\0';
-    ptr+=2;
+    ptr++;
     info->fileLen = *ptr++; // set the first digit of len 
     DONE;
     // continue adding digits to fileLen
