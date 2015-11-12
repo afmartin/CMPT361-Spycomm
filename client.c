@@ -104,6 +104,44 @@ struct addrinfo * buildAddrInfo (char * address, char * port){
 	
 }
 
+int getSocket (struct addrinfo * info){
+	
+	struct addrinfo * iter;
+	
+	int sock = -1;
+	
+	for (iter = info; iter; iter=iter->ai_next){
+		sock =  socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
+		if (sock == -1){
+			perror("Socket creation: ");
+			iter = iter->ai_next;
+			continue;
+		}
+		/* int temp = 1;
+		int check = setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(temp));
+		if (check == -1){
+			perror("setsock: ");
+			close(*sock);
+			*sock = -1;
+			continue;
+		} */
+		int check = bind(sock, iter->ai_addr, iter->ai_addrlen);
+		if (check == -1){
+			perror("bind failure: ");
+			close(sock);
+			sock = -1;
+			continue;
+		}
+		break;
+	}
+	
+	if (iter == NULL && sock == -1){
+		printf("Failed to make a socket!/n");
+		exit(1);
+	}
+	
+	return sock;
+}
 
 int main (int argc, char * argv[]){
 
