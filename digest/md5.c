@@ -169,15 +169,3 @@ static void md5ProcessBlock(struct md5CTX *ctx, const byte_t *block)
   ctx->h[2] += c;
   ctx->h[3] += d;
 }
-
-int main() {
-	byte_t * message = "Hello world!";
-	struct md5CTX md; 
-	memset(md, 0, sizeof(struct md5CTX));
-	md5Start(&md);
-	md5Add(&md, message, 12);
-	char * digest;
-	md5End(&md, digest);
-	printf("%s", digest);
-}
-
