@@ -117,27 +117,24 @@ int getSocket (struct addrinfo * info){
 			iter = iter->ai_next;
 			continue;
 		}
-		/* int temp = 1;
-		int check = setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(temp));
-		if (check == -1){
-			perror("setsock: ");
-			close(*sock);
-			*sock = -1;
-			continue;
-		} */
-		int check = bind(sock, iter->ai_addr, iter->ai_addrlen);
-		if (check == -1){
-			perror("bind failure: ");
-			close(sock);
-			sock = -1;
-			continue;
-		}
 		break;
 	}
 	
 	if (iter == NULL && sock == -1){
-		printf("Failed to make a socket!/n");
+		fprintf(stderr, "Failed to make a socket!/n");
 		exit(1);
+	}
+	
+	return sock;
+}
+
+int connectTo (int sock, struct addrinfo * info){
+	
+	int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
+	
+	if (returnCode != 0){
+		fprintf(stderr, "Failed to connect!/n");
+		return sock;
 	}
 	
 	return sock;
