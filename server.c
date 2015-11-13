@@ -18,10 +18,11 @@ Description:
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "server.h"
+#include "file.h"
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36215" // This can change and should be in our protocol
+#define DEFAULT_PORT "36115" // This can change and should be in our protocol
 #define T_TYPE 'T'
 #define F_TYPE 'F'
 #define E_TYPE 'E'
@@ -206,21 +207,24 @@ void* worker(void * arg) { //this is the function that threads will call
   }
 
   if (initFileTransfer(*cd, info)){
-    //DONE;
+    
     uint8_t * fileContents; //+1 to allow for null term
     printf("%d\n", (*info).fileLen);
     fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
-    //DONE;
     uint8_t * ptr = fileContents; // set pointer to start of fileContents
     while(!done){
       received = recv(*cd, packet, len, 0);
-      //DONE;
       if(packet[0] == 'D'){ // check if client is finished sending
 	done = 1;
 	break;
       }
-      for (int i = 1; i < received; i++)
-	*ptr++ = packet[i]; // set 
+      if (packet[0] == 'F'){
+	writeToFile("HELLOWORLD", packet+1, 11);
+	/*for (int i = 1; i < received; i++)
+	 
+	  //*ptr++ = packet[i]; // set 
+	  }*/
+      }
     }
     if (done){} // output to file
   }

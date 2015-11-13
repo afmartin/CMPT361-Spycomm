@@ -14,6 +14,7 @@ Description:
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include "file.h"
 
 int getFileSize(int fd) {
   struct stat buf;
