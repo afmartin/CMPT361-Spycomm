@@ -15,23 +15,24 @@ Description:
 #include <sys/types.h>
 #include <stdlib.h>
 
-int getFileSize(int fd) {
-  struct stat buf;
-  int size;
+size_t getFileSize(int fd) {
+  struct stat buf; //init stat structure from sys/stat.h
+  size_t size;
   
-  fstat(fd, &buf);
-  size = buf.st_size;
+  fstat(fd, &buf); //call fstat on file descriptor, pass buf struct
+  size = buf.st_size; //get file size from structure
 
   return size;
 }
 
 int getFileArray(FILE* file, int fileSize,  uint8_t *byteArray) {
+  //call fread on file
   size_t newLen = fread(byteArray, 1, fileSize, file);
   if (newLen == 0) {
     fprintf(stderr, "Error reading file\n");
     return -1;
   } else {
-    byteArray[newLen++] = '\0';
+    byteArray[newLen++] = '\0'; //add escape character
   }
   return 0;
 }
@@ -41,23 +42,23 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
   uint8_t chr;
   FILE *fp;
 
-  k = (fileSize / sizeof(uint8_t));
+  k = (fileSize / sizeof(uint8_t)); //calculate how many indexes in array
 
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
-  fp = fopen(filename, "w+");
+  fp = fopen(filename, "w+"); //open file to write
   if (fp == NULL) {
     fprintf(stderr, "Error opening file '%s'\n", filename);
     return -1;
   }
 
-  for (i = 0; i < k; i++) {
+  for (i = 0; i < k; i++) { //iterate through array
     chr = byteArray[i];
     if (chr == EOF) {
       break;
     }
-    char c = (char) chr;
-    fwrite(&c, 1, sizeof(c), fp);
+    char c = (char) chr; 
+    fwrite(&c, 1, sizeof(c), fp); //write character to file
   }
 
   close(fp);
@@ -72,9 +73,9 @@ void printByteArray(uint8_t* byteArray, int fileSize) {
     fprintf(stdout, "%x ", byteArray[i]);
 }
 	       
-/*main function used to test above functions
+//main function used to test above functions
 
-int main(void) {
+/*int main(void) {
   FILE *fp, *fp2;
   int fd, size, i, k;
   uint8_t *array;
@@ -93,5 +94,5 @@ int main(void) {
   writeToFile(filename2, array, size);
   free(array);
   return 0;
-  } */
+  }*/ 
 
