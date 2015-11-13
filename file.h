@@ -11,7 +11,7 @@ Description:
 #ifndef _FILE_H
 #define _FILE_H
 
-int getFileSize(int fd);
+size_t getFileSize(int fd);
 /* The function takes a file descriptor as parameters and
    returns the size of the file in bytes. */
 
