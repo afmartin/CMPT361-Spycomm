@@ -24,10 +24,11 @@ server.o: server.c
 client.o: client.c
 compress.o: compress.c compress.h
 user.o: user.c user.h
+file.o: file.c file.h
 
 clean:
 	$(RM) spycommd spycomm *.o
 
-
-serv: server.c
+serv: server.c file.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
+

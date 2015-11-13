@@ -14,6 +14,7 @@ Description:
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include "file.h"
 
 size_t getFileSize(int fd) {
   struct stat buf; //init stat structure from sys/stat.h
