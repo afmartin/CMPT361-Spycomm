@@ -19,6 +19,7 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #define IPV6_ADDRLEN 46
 #define MAX_PORTS_LEN 32
 #define MAX_PATH_LEN 64
+#define MD5LEN 16
 
 #define OPTSTRING "hc:p:o:f:"
 
@@ -29,29 +30,20 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #define F_TYPE 'F'
 
 
+//This is a struct to hold the command line strings
 struct commandLine {
-	char * address;
-	char * ports;
-	char * padPath;
-	char * filePath;
+	char address[IPV6_ADDRLEN];
+	char ports[MAX_PORTS_LEN];
+	char padPath[MAX_PATH_LEN];
+	char filePath[MAX_PATH_LEN];
 };
 
-void freeCommandLine (struct commandLine * cmd){
-	free(cmd->address);
-	free(cmd->ports);
-	free(cmd->padPath);
-	free(cmd->filePath);
-	free(cmd);
-}
-
+//Grabs the command line options and places them into their
+//coresponding parts of the commandLine Struct
 struct commandLine * getOptions (int argc, char * argv[]){
 	struct commandLine * options = malloc(sizeof(struct commandLine));
-	options->address = malloc(IPV6_ADDRLEN);
-	options->ports = malloc(MAX_PORTS_LEN);
-	options->padPath = malloc(MAX_PATH_LEN);
-	options->filePath = malloc(MAX_PATH_LEN);
 		
-	if (options->address == NULL || options->ports == NULL || options->padPath == NULL || options->filePath == NULL){
+	if (options == NULL){
 		printf("Memory allocation failed!\n");
 		exit(1);
 	}
@@ -86,6 +78,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	return options;
 }
 
+//Build and addrinfo struct linkedlist given an address and port
 struct addrinfo * buildAddrInfo (char * address, char * port){
 	
 	struct addrinfo hints, *res;
@@ -107,12 +100,14 @@ struct addrinfo * buildAddrInfo (char * address, char * port){
 	
 }
 
+//Gets a new socket given an addrinfo struct linkedlist
 int getSocket (struct addrinfo * info){
 	
 	struct addrinfo * iter;
 	
 	int sock = -1;
 	
+	//iterates through the list and attempts to make a socket
 	for (iter = info; iter; iter=iter->ai_next){
 		sock =  socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
 		if (sock == -1){
@@ -131,6 +126,8 @@ int getSocket (struct addrinfo * info){
 	return sock;
 }
 
+
+//takes a socket and an addrinfo struct and attempts to conncet to a remote host
 int connectTo (int sock, struct addrinfo * info){
 	
 	int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
@@ -143,12 +140,17 @@ int connectTo (int sock, struct addrinfo * info){
 	return sock;
 }
 
+
+//Given a uint8_t array sends the array until all the data is sent,
+//or something goes wrong. Takes a socket, the buffer, the length of buffer
+//and returns a boolean for success, and sets the len variable to the 
+//amount of bytes actually sent
 int sendAll(int sock, uint8_t * buffer, int  * len){
 	
 	int sent = 0;
 	int left = *len;
 	int ret;
-	
+		
 	while (sent < *len){
 		ret = send(sock, buffer + sent, left, 0);
 		if (ret == -1){ return -1; }
@@ -161,27 +163,53 @@ int sendAll(int sock, uint8_t * buffer, int  * len){
 	return 0;
 }
 
+//Sends the initialization to the server given the socket, filename, length of file,
+//MD5 padID, and returns true or false depending on whether it succeeds
 int initiateFileTransfer(int sock, char * fileName, char * length, char * padID){
 	
-	char * test = "Tfilename|dhjcnfghfedrtyfd|1|";
-	int * len = malloc(sizeof(int));
+	//Get the length of the initialization packet
+	int initStringLen = sizeof(char) + strlen(fileName) + strlen(length) + strlen(padID) + 3;
 	
-	*len = strlen(test);
+	//Create an array for the packet
+	char initString[initStringLen];
+	memset(&initString, 0, initStringLen);
 	
-	int check = *length;
+	//Build the packet by concatenating the strings
+	initString[0] = T_TYPE;
+	char * position = &initString[1];
+	memcpy(position, fileName, strlen(fileName) + 1);
+	position += strlen(fileName) + 1;
+	memcpy(position, length, strlen(fileName) + 1);
+	position += strlen(fileName) + 1;
+	memcpy(position, padID, strlen(fileName) + 1);
 	
-	int sent = sendAll(sock, (uint8_t *) test, len); 
+	//Create a int to hold the length of bytes to send
+	//Will also hold the number of bytes sent after sendAll
+	int * sending = malloc(sizeof(int));
+	*sending = sizeof(initString);
+
+	//A check variable to see if the sent length is equal to
+	//actual length after the sendAll call
+	int check = initStringLen;
 	
+	//Attempts to send all the data out
+	int sent = sendAll(sock, (uint8_t *) initString, sending); 
+	
+	//If sendAll failed
 	if (sent == -1){
 		fprintf(stderr, "Sendall Failed!\n");
 		exit(1);
 	}
-	
-	if (*length != check){
+
+	//Check to see if all the data sent
+	if (*sending != check){
 		fprintf(stderr, "Failed to send all the data!\n");
+		free(sending);
 		return 0;
 	}
+	//if it did all sent, return true
 	else {
+		free(sending);
 		return 1;
 	}
 }
@@ -200,12 +228,11 @@ int main (int argc, char * argv[]){
 	
 	connectTo(sock, serverInfo);
 	
-	initiateFileTransfer(sock, "Whatever", "Balls", "69");
+	initiateFileTransfer(sock, "FILE1", "1", "S8267SHASKDJHKAD");
 	
 	close(sock);
 	
 	freeaddrinfo(serverInfo);
-	freeCommandLine(opts);
 
 	return 1;
 }
