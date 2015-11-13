@@ -91,14 +91,13 @@ struct addrinfo * buildAddrInfo (char * address, char * port){
 	struct addrinfo hints, *res;
 	memset(&hints, 0, sizeof(struct addrinfo));
 	
-	hints.ai_family = AF_INET6;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_family = AI_V4MAPPED;
 	
 	int returnCode = getaddrinfo(address, port, &hints, &res);
 	
 	if (returnCode != 0){
-		fprintf(stderr, "Getaddrinfo failure!\n");
+		perror("Getaddrinfo failure: ");
 		exit(1);
 	}
 	
@@ -162,10 +161,30 @@ int sendAll(int sock, uint8_t * buffer, int  * len){
 	return 0;
 }
 
-/* int initiateFileTransfer(int sock){
+int initiateFileTransfer(int sock, char * fileName, char * length, char * padID){
 	
-	ma
-} */
+	char * test = "Tfilename|dhjcnfghfedrtyfd|1|";
+	int * len = malloc(sizeof(int));
+	
+	*len = strlen(test);
+	
+	int check = *length;
+	
+	int sent = sendAll(sock, (uint8_t *) test, len); 
+	
+	if (sent == -1){
+		fprintf(stderr, "Sendall Failed!\n");
+		exit(1);
+	}
+	
+	if (*length != check){
+		fprintf(stderr, "Failed to send all the data!\n");
+		return 0;
+	}
+	else {
+		return 1;
+	}
+}
 
 int main (int argc, char * argv[]){
 
@@ -173,6 +192,19 @@ int main (int argc, char * argv[]){
 	
 	printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
 	
+	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
+	
+	int sock = getSocket(serverInfo);
+	
+	printf("Got a socket!\n");
+	
+	connectTo(sock, serverInfo);
+	
+	initiateFileTransfer(sock, "Whatever", "Balls", "69");
+	
+	close(sock);
+	
+	freeaddrinfo(serverInfo);
 	freeCommandLine(opts);
 
 	return 1;

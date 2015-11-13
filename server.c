@@ -150,7 +150,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     info->padID[position] = '\0';
     ptr++;
     info->fileLen = *ptr++; // set the first digit of len 
-    DONE;
+    //DONE;
     // continue adding digits to fileLen
     while (*ptr != '|'){
       info->fileLen =  info->fileLen * 10 + *ptr++;

@@ -15,10 +15,10 @@ LDLIBS = -lpthread
 all: spycommd spycomm
 
 spycommd: server.o crypt.o compress.o user.o
-	$(CC) $^ -o $@
+	$(CC) $(LDLIBS) $^ -o $@
 
 spycomm: client.o crypt.o compress.o user.o
-	$(CC) $^ -o $@
+	$(CC) $(LDLIBS) $^ -o $@
 
 server.o: server.c 
 client.o: client.c
