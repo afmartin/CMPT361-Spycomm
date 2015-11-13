@@ -30,8 +30,10 @@ Description:
 #define MAX_THREAD 10
 #define TRUE 1
 #define FALSE 0
-#define MAXLEN 33
+#define MAXLEN 64
 #define MAX_FILE_NAME 64
+#define MAX_MD5LEN 16
+#define MAX_FILE_LENGTH_AS_STRING 10
 
 /* typedef struct _threadArgs{ */
   
@@ -41,8 +43,8 @@ Description:
 
 typedef struct _fileInfo {
   char filename[MAX_FILE_NAME];
-  char padID[MAXLEN];
   int fileLen;
+  char padID[MAX_MD5LEN + 1];
 } fileInfo;
 
 void printUsage(char* name) {
@@ -132,6 +134,8 @@ int initFileTransfer(int cd, fileInfo *info) {
   uint8_t * ptr = buf+1;
   uint8_t msg[MAXLEN];
   
+  char temp[MAXLEN];
+  
   if (recv(cd, buf, MAXLEN, 0) == -1) {
     fprintf(stderr, "Error in read\n");
     exit(1);
@@ -141,22 +145,50 @@ int initFileTransfer(int cd, fileInfo *info) {
     int position = 0;
     
     // copy filename into struct 
-    while (*ptr != '|') info->filename[position++] = *ptr++;    
-    info->filename[position] = '\0'; 
+    while (*ptr != '\0') {
+		if (position == sizeof(info->filename) - 1){
+			break;
+		}
+		temp[position++] = *ptr++;
+	}
+    temp[position] = '\0'; 
+	
+	//Copy the string into the struct
+	strcpy(info->filename, temp);
+	
+	//Skip over the null terminator and reset the position
     ptr++;
     position = 0;
-    // copy padID into struct
-    while (*ptr != '|') info->padID[position++] = *ptr++;
-    info->padID[position] = '\0';
-    ptr++;
-    info->fileLen = *ptr++; // set the first digit of len 
-    //DONE;
-    // continue adding digits to fileLen
-    while (*ptr != '|'){
-      info->fileLen =  info->fileLen * 10 + *ptr++;
-      //printf("%c\n", *ptr);
+	
+    // copy fileLen into struct
+    while (*ptr != '\0'){
+		if (position == MAX_FILE_LENGTH_AS_STRING){
+			fprintf(stderr, "File size requested too large!\n");
+			exit(1);
+		}
+		temp[position++] = *ptr++;
     }
-    printf("%s -- %s -- %d", info->filename, info->padID, info->fileLen);
+	temp[position] = '\0';
+	
+	//convert the string to an int
+	info->fileLen = atoi(temp);
+	
+    ptr++;
+    position = 0;
+	
+    //copy the PadID into the struct
+    while (*ptr != '\0'){
+		if (position == sizeof(info->padID) - 1){
+			break;
+		}
+		temp[position++] = *ptr++;
+	}
+	temp[position] = '\0';
+
+	//Copy the string into the struct
+	strcpy(info->padID, temp);
+	
+    printf("%s -- %d -- %s", info->filename, info->fileLen, info->padID);
   }
   else return FALSE;
   

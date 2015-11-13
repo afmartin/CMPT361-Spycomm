@@ -179,9 +179,16 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	char * position = &initString[1];
 	memcpy(position, fileName, strlen(fileName) + 1);
 	position += strlen(fileName) + 1;
-	memcpy(position, length, strlen(fileName) + 1);
-	position += strlen(fileName) + 1;
-	memcpy(position, padID, strlen(fileName) + 1);
+	memcpy(position, length, strlen(length) + 1);
+	position += strlen(length) + 1;
+	memcpy(position, padID, strlen(padID) + 1);
+	
+	printf("%d\n",initStringLen);
+	for(int i = 0; i < initStringLen; i++){
+		printf("%c", initString[i]);
+	}
+	printf("\n");
+	
 	
 	//Create a int to hold the length of bytes to send
 	//Will also hold the number of bytes sent after sendAll
