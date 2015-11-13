@@ -16,6 +16,8 @@ Description:
 #include <stdlib.h>
 #include "file.h"
 
+#define DONES printf("done");
+
 size_t getFileSize(int fd) {
   struct stat buf; //init stat structure from sys/stat.h
   size_t size;
@@ -44,7 +46,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
   FILE *fp;
 
   k = (fileSize / sizeof(uint8_t)); //calculate how many indexes in array
-
+  //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
   fp = fopen(filename, "w+"); //open file to write
@@ -52,7 +54,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
     fprintf(stderr, "Error opening file '%s'\n", filename);
     return -1;
   }
-
+  //DONES;
   for (i = 0; i < k; i++) { //iterate through array
     chr = byteArray[i];
     if (chr == EOF) {
@@ -61,9 +63,9 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
     char c = (char) chr; 
     fwrite(&c, 1, sizeof(c), fp); //write character to file
   }
-
+  //DONES;
   close(fp);
-  return 0;
+  return 1;
 }
 
 void printByteArray(uint8_t* byteArray, int fileSize) {

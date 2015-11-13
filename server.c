@@ -250,8 +250,15 @@ void* worker(void * arg) { //this is the function that threads will call
 	done = 1;
 	break;
       }
-      if (packet[0] == 'F'){
-	writeToFile("HELLOWORLD", packet+1, 11);
+      
+      //printf("%c\n", (char) packet[0]);
+      printByteArray(packet, 12);
+      done = 1;
+      if (packet[0] == 5){
+	DONE;
+	writeToFile("HELLOWORLD", packet, 11);
+	DONE;
+	done = 1;
 	/*for (int i = 1; i < received; i++)
 	 
 	  //*ptr++ = packet[i]; // set 
@@ -260,7 +267,6 @@ void* worker(void * arg) { //this is the function that threads will call
     }
     if (done){} // output to file
   }
-      
   //Function that actually transfers the file
   free(info);
   return NULL;
@@ -291,9 +297,9 @@ int main(int argc, char* argv[]) {
     }
   }
   
+  sd = getSocket(port); //This should be in netCode.h
   while (TRUE){
     //threading goes here
-    sd = getSocket(port); //This should be in netCode.h
     cd = acceptCon(sd);    
     pthread_create(&tid, NULL, worker, &cd);
     pthread_join(tid, NULL);
