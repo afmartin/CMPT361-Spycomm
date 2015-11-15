@@ -20,6 +20,11 @@ else
 fi
 counter=0
 
+# Ref: http://stackoverflow.com/questions/59838/check-if-a-directory-exists-in-a-shell-script
+if [ ! -d "otp" ]; then
+    mkdir otp;
+fi
+
 while [ $counter -lt  $count ]; do 
 	dd if=/dev/urandom of=gen.dat bs=1M count=10 status=none
 	filename=$(cat gen.dat | md5sum)
