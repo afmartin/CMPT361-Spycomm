@@ -16,6 +16,8 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#include "file.h"
+
 #define IPV6_ADDRLEN 46
 #define MAX_PORTS_LEN 32
 #define MAX_PATH_LEN 64
@@ -235,7 +237,46 @@ int main (int argc, char * argv[]){
 	
 	connectTo(sock, serverInfo);
 	
-	initiateFileTransfer(sock, "FILE1", "1", "S8267SHASKDJHKAD");
+	
+	
+	
+	FILE * fp = fopen(opts->filePath, "r");
+	int fd;
+	fd = fileno(fp);
+	int * fileSize = malloc(sizeof(int));
+	*fileSize = getFileSize(fd);
+	
+	char * fileLenAsString = malloc(10);
+	snprintf(fileLenAsString, 10, "%d", *fileSize);
+	
+	initiateFileTransfer(sock, opts->filePath, fileLenAsString, "S8267SHASKDJHKAD");
+	
+	uint8_t * fileData = malloc(*fileSize);
+	getFileArray(fp, *fileSize, fileData);
+	close(fd);
+	fp = NULL;
+	
+	char * type = malloc(1);
+	*type = 'F';
+	
+	int * sent = malloc(sizeof(int));
+	*sent = 1;
+	
+	uint8_t * data = malloc(*fileSize + 1);
+	data[0] = (*(uint8_t *) type);
+	memcpy(data + 1, fileData, *fileSize);
+	
+	*sent = *fileSize + 1;
+	
+	sendAll(sock, data, sent);
+	type[0] = 'D';
+	sendAll(sock,  (uint8_t *) &type[0], sent);
+	
+	printByteArray(data, *fileSize + 1);
+	
+	writeToFile("Test", data, *fileSize + 1);
+	
+	free(fileData);
 	
 	close(sock);
 	
