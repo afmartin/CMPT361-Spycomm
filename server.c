@@ -17,6 +17,8 @@ Description:
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <errno.h>
+#include <signal.h>
 #include "server.h"
 #include "file.h"
 //#include "digest.h"
@@ -43,8 +45,7 @@ Description:
 /*   fileInfo info; */
 /* } threadArgs; */
 
-volatile int threads = 0;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+volatile int running = 1;
 
 typedef struct _fileInfo {
   char filename[MAX_FILE_NAME];
@@ -230,72 +231,70 @@ int acceptCon(int socket) {
 }
 
 void* worker(void * arg) { //this is the function that threads will call
-  uint8_t me = (uint8_t) pthread_self();
   int done = 0;
   uint8_t* temp;
   char* filePath;
   char folder[100] = "./serverfiles/";
-  int * cd = (int *) arg;
+  int * sd = (int*) arg;
   uint8_t packet[MAXLEN];
   size_t len = MAXLEN;
   ssize_t received;
-  fileInfo *info = malloc(sizeof(info));
-  if (info == NULL) {
-    fprintf(stderr, "Memory allocation failure\n");
-    exit(1);
-  }
-  pthread_mutex_lock(&lock);
-  threads++;
-  pthread_mutex_unlock(&lock);
 
-  if (initFileTransfer(*cd, info)){
-    
-    uint8_t * fileContents; //+1 to allow for null term
-    printf("%d\n", (*info).fileLen);
-    fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
-    uint8_t * ptr = fileContents; // set pointer to start of fileContents
-    while(!done){
-      received = recv(*cd, packet, len, 0);
-      if(packet[0] == 'D'){ // check if client is finished sending
-	done = 1;
-	break;
-      }
+  while (TRUE) { //threads will run forever
+    fileInfo *info = malloc(sizeof(info)); 
+    if (info == NULL) {
+      fprintf(stderr, "Memory allocation failure\n");
+      exit(1);
+    }
 
-      if (packet[0] == 'F'){
-        //getMd5Digest(packet+1, info->fileLen, temp);
-	//convertMd5ToString(filePath, temp);
-	//strcat(folder, filePath); //concat file path with md5 digest
-	DONE;
-	strcat(folder, info->filename);
-	printf("folder is %s\n", folder);
-	printf("file len is %d\n", info->fileLen);
-	int k = writeToFile(folder, packet+1, info->fileLen);
-	if (k != 1)
-	  pthread_exit(NULL);
-	done = 1;
-	/*for (int i = 1; i < received; i++)
-	 
+    printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id
+    int cd = acceptCon(*sd); //wait for a client to connect
+    //memset(packet, 0, sizeof(packet));
+
+    if (initFileTransfer(cd, info)){
+      uint8_t * fileContents; //+1 to allow for null term
+      fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
+      uint8_t * ptr = fileContents; // set pointer to start of fileContents
+
+      while(!done){
+	received = recv(cd, packet, len, 0);
+	if(packet[0] == 'D'){
+	  free(fileContents);// check if client is finished sending
+	  done = 1;
+	  break;
+	}
+	
+	if (packet[0] == 'F'){
+	  //getMd5Digest(packet+1, info->fileLen, temp);
+	  //convertMd5ToString(filePath, temp);
+	  //strcat(folder, filePath); //concat file path with md5 digest
+	  strcat(folder, (*info).filename);
+	  int k = writeToFile(folder, packet+1, (*info).fileLen);
+	  if (k != 1) //check return value of write to file
+	    pthread_exit(NULL);
+	  done = 1;
+	  /*for (int i = 1; i < received; i++)
+	    
 	  //*ptr++ = packet[i]; // set 
 	  }*/
+	}
       }
+      // if (done){} // output to file
     }
-    // if (done){} // output to file
+    //Function that actually transfers the file
+    free(info);
+    printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
   }
-  //Function that actually transfers the file
-  free(info);
-  pthread_mutex_lock(&lock);
-  threads--;
-  printf("Hello I'm thread %d and I'm commiting suicide\n", me);
-  pthread_mutex_unlock(&lock);
-  pthread_exit(NULL);
-  return NULL;
+  //pthread_exit(NULL);
+    return NULL;
 }
-
+void inputHandler(int s) {
+  running = 0;
+}
 int main(int argc, char* argv[]) {
-  
-  int opt, sd, cd;
+  int opt, sd, i;
   char *port = DEFAULT_PORT;
-  //pthread_t tid;
+  pthread_t tid[MAX_THREAD];
 
   
   while ((opt = getopt(argc, argv, "hp:")) != -1) {
@@ -312,18 +311,23 @@ int main(int argc, char* argv[]) {
       port = optarg;
       break;
     default:
-      printf("Invalid parameter\n");
+      printUsage(argv[0]);
+      exit(0);
     }
   }
   
   sd = getSocket(port); //This should be in netCode.h
-  while (TRUE){
-    //threading goes here
-    pthread_t tid;
-    cd = acceptCon(sd);
-    while (threads > MAX_THREAD) {
-    }
-    pthread_create(&tid, NULL, worker, &cd);
+  for (i = 0; i < MAX_THREAD; i++) { //create threads
+      pthread_create(&tid[i], NULL, worker, &sd);
+  }
+
+  signal(SIGINT, inputHandler); //catch ctrl-c
+  while(running) { //busy wait 
+  }
+
+  printf("Killing threads...\n");
+  for (i = 0; i < MAX_THREAD; i++) {
+    pthread_kill(tid[i], SIGKILL);
   }
   return 0;
 }
