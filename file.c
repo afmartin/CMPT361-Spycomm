@@ -10,6 +10,7 @@ Description:
 
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -49,7 +50,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
   //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
-  fp = fopen(filename, "w+"); //open file to write
+  fp = fopen(filename, "wb+"); //open file to write
   if (fp == NULL) {
     fprintf(stderr, "Error opening file '%s'\n", filename);
     return -1;
@@ -64,7 +65,8 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
     fwrite(&c, 1, sizeof(c), fp); //write character to file
   }
   //DONES;
-  close(fp);
+  fclose(fp);
+  printf("Closed the file!\n");
   return 1;
 }
 

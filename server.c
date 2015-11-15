@@ -254,9 +254,11 @@ void* worker(void * arg) { //this is the function that threads will call
       //printf("%c\n", (char) packet[0]);
       printByteArray(packet, 12);
       done = 1;
-      if (packet[0] == 5){
+      if (packet[0] == 'F'){
 	DONE;
-	writeToFile("HELLOWORLD", packet, 11);
+	printf("%s\n", packet);
+	int z = writeToFile("HELLOWORLD", packet+1, 11);
+	printf("the value of k is %d\n", z);
 	DONE;
 	done = 1;
 	/*for (int i = 1; i < received; i++)
@@ -265,7 +267,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  }*/
       }
     }
-    if (done){} // output to file
+    // if (done){} // output to file
   }
   //Function that actually transfers the file
   free(info);
@@ -303,7 +305,7 @@ int main(int argc, char* argv[]) {
     cd = acceptCon(sd);    
     pthread_create(&tid, NULL, worker, &cd);
     pthread_join(tid, NULL);
-  }
+    }
   return 0;
 }
   
