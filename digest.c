@@ -40,5 +40,3 @@ void convertMd5ToString(char * string, uint8_t * digest) {
 		snprintf(string + (i * 2), MD5_STRING_LENGTH - (i*2), "%02x", digest[i]);
 	}
 }
-
-
