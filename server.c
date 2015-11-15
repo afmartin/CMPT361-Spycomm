@@ -19,6 +19,7 @@ Description:
 #include <netdb.h>
 #include "server.h"
 #include "file.h"
+//#include "digest.h"
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
@@ -28,7 +29,7 @@ Description:
 #define E_TYPE 'E'
 #define D_TYPE 'D'
 
-#define MAX_THREAD 10
+#define MAX_THREAD 5
 #define TRUE 1
 #define FALSE 0
 #define MAXLEN 64
@@ -41,6 +42,9 @@ Description:
 /*   int sockfd; */
 /*   fileInfo info; */
 /* } threadArgs; */
+
+volatile int threads = 0;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _fileInfo {
   char filename[MAX_FILE_NAME];
@@ -226,8 +230,11 @@ int acceptCon(int socket) {
 }
 
 void* worker(void * arg) { //this is the function that threads will call
-  
+  uint8_t me = (uint8_t) pthread_self();
   int done = 0;
+  uint8_t* temp;
+  char* filePath;
+  char folder[100] = "./serverfiles/";
   int * cd = (int *) arg;
   uint8_t packet[MAXLEN];
   size_t len = MAXLEN;
@@ -237,6 +244,9 @@ void* worker(void * arg) { //this is the function that threads will call
     fprintf(stderr, "Memory allocation failure\n");
     exit(1);
   }
+  pthread_mutex_lock(&lock);
+  threads++;
+  pthread_mutex_unlock(&lock);
 
   if (initFileTransfer(*cd, info)){
     
@@ -250,16 +260,18 @@ void* worker(void * arg) { //this is the function that threads will call
 	done = 1;
 	break;
       }
-      
-      //printf("%c\n", (char) packet[0]);
-      printByteArray(packet, 12);
-      done = 1;
+
       if (packet[0] == 'F'){
+        //getMd5Digest(packet+1, info->fileLen, temp);
+	//convertMd5ToString(filePath, temp);
+	//strcat(folder, filePath); //concat file path with md5 digest
 	DONE;
-	printf("%s\n", packet);
-	int z = writeToFile("HELLOWORLD", packet+1, 11);
-	printf("the value of k is %d\n", z);
-	DONE;
+	strcat(folder, info->filename);
+	printf("folder is %s\n", folder);
+	printf("file len is %d\n", info->fileLen);
+	int k = writeToFile(folder, packet+1, info->fileLen);
+	if (k != 1)
+	  pthread_exit(NULL);
 	done = 1;
 	/*for (int i = 1; i < received; i++)
 	 
@@ -271,6 +283,11 @@ void* worker(void * arg) { //this is the function that threads will call
   }
   //Function that actually transfers the file
   free(info);
+  pthread_mutex_lock(&lock);
+  threads--;
+  printf("Hello I'm thread %d and I'm commiting suicide\n", me);
+  pthread_mutex_unlock(&lock);
+  pthread_exit(NULL);
   return NULL;
 }
 
@@ -278,7 +295,7 @@ int main(int argc, char* argv[]) {
   
   int opt, sd, cd;
   char *port = DEFAULT_PORT;
-  pthread_t tid; 
+  //pthread_t tid;
 
   
   while ((opt = getopt(argc, argv, "hp:")) != -1) {
@@ -302,10 +319,12 @@ int main(int argc, char* argv[]) {
   sd = getSocket(port); //This should be in netCode.h
   while (TRUE){
     //threading goes here
-    cd = acceptCon(sd);    
-    pthread_create(&tid, NULL, worker, &cd);
-    pthread_join(tid, NULL);
+    pthread_t tid;
+    cd = acceptCon(sd);
+    while (threads > MAX_THREAD) {
     }
+    pthread_create(&tid, NULL, worker, &cd);
+  }
   return 0;
 }
   
