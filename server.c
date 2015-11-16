@@ -34,7 +34,7 @@ Description:
 #define MAX_THREAD 5
 #define TRUE 1
 #define FALSE 0
-#define MAXLEN 64
+#define MAXLEN 1000
 #define MAX_FILE_NAME 64
 #define MAX_MD5LEN 16
 #define MAX_FILE_LENGTH_AS_STRING 10
@@ -260,7 +260,11 @@ void* worker(void * arg) { //this is the function that threads will call
       uint8_t * ptr = fileContents; // set pointer to start of fileContents
       strcat(folder, (*info).filename);
       while(!done){
-	received = recv(cd, packet, len, 0);
+	char * pttr = packet;
+	for (int i = 0; i < MAXLEN; i++){
+	  received = recv(cd, pttr, 1, 0);
+	  pttr++;
+	}
 	if(packet[0] == 'D'){
 	  free(fileContents);// check if client is finished sending
 	  done = 1;
