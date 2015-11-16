@@ -17,7 +17,8 @@ Description:
 #include <stdlib.h>
 #include "file.h"
 
-#define DONES printf("done");
+//#define DONES printf("done");
+
 
 size_t getFileSize(int fd) {
   struct stat buf; //init stat structure from sys/stat.h
@@ -29,15 +30,23 @@ size_t getFileSize(int fd) {
   return size;
 }
 
-int getFileArray(FILE* file, int fileSize,  uint8_t *byteArray) {
+uint8_t ** getFileArray(FILE* file, int fileSize) {
+  
+  int amountOfPackets = fileSize / MAX_PACKET_LEN;
+  uint8_t ** byteArray;
+  byteArray = (uint8_t **)malloc
+    ((sizeof(uint8_t) * MAX_PACKET_LEN) * amountOfPackets);
+
   //call fread on file
-  size_t newLen = fread(byteArray, 1, fileSize, file);
-  if (newLen == 0) {
-    fprintf(stderr, "Error reading file\n");
-    return -1;
-  } else {
-    byteArray[newLen++] = '\0'; //add escape character
+  for(int i = 0; i < amountOfPackets; i++){
+    size_t read = fread(byteArray[i], 1, MAX_PACKET_LEN, file);
+    if (read == 0) {
+      fprintf(stderr, "Error reading file\n");
+      return NULL;
+    }
   }
+
+  //byteArray[newLen+1] = '\0'; //add escape character
   return 0;
 }
 
@@ -70,12 +79,13 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
   return 1;
 }
 
-void printByteArray(uint8_t* byteArray, int fileSize) {
-  int i, k;
-  k = (fileSize / sizeof(uint8_t));  
+void printByteArray(uint8_t ** byteArray, int fileSize) {
+  int k;
+  k = fileSize / MAX_PACKET_LEN;  
 
-  for (i = 0; i < k; i++) 
-    fprintf(stdout, "%x ", byteArray[i]);
+  for (int i = 0; i < k; i++)
+    for (int ii = 0; ii < MAX_PACKET_LEN; ii++)
+      fprintf(stdout, "%x ", byteArray[i][ii]);
 }
 	       
 //main function used to test above functions
