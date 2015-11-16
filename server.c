@@ -241,7 +241,7 @@ void* worker(void * arg) { //this is the function that threads will call
   uint8_t packet[MAXLEN];
   size_t len = MAXLEN;
   ssize_t received;
-
+  
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id		  
   while (TRUE){
     int cd = acceptCon(*sd); //wait for a client to connect
@@ -282,33 +282,10 @@ void* worker(void * arg) { //this is the function that threads will call
 	      *ptr++ = packet[i]; // set 
 	    
 	  }
-      }
-      
-      memset(packet, 0, sizeof(packet));
-      
-      if (initFileTransfer(cd, info)){
-	uint8_t * fileContents; //+1 to allow for null term
-	fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
-	uint8_t * ptr = fileContents; // set pointer to start of fileContents
-	strcat(folder, (*info).filename);
-	while(!done){
-	  received = recv(cd, packet, len, 0);
-	  if (packet[0] == 'D') {
-	    printf("yeeeeeeeeee\n");
-	    free(fileContents);// check if client is finished sending
-	    done = 1;
-	    break;
-	  }
-	  //	  printf("Recieved is %d\n", received);
-	  if (packet[0] == 'F' && done != 1) {
-	    //getMd5Digest(packet+1, info->fileLen, temp);
-	    //convertMd5ToString(filePath, temp);
-	    //strcat(folder, filePath); //concat file path with md5 digest
-	    
-	    for (int i = 1; i < received; i++)
-	      *ptr++ = packet[i]; // set 	    
-	  }
 	}
+      
+	memset(packet, 0, sizeof(packet));
+      
       } else{
 	free(info);
 	done = 1;
