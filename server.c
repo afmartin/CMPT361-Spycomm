@@ -240,22 +240,25 @@ void* worker(void * arg) { //this is the function that threads will call
   size_t len = MAXLEN;
   ssize_t received;
 
-  while (TRUE) { //threads will run forever
-    fileInfo *info = malloc(sizeof(info)); 
+  while (TRUE){
+  int cd = acceptCon(*sd); //wait for a client to connect
+  
+  
+  while (cd) { //threads will run forever
+    fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
     if (info == NULL) {
       fprintf(stderr, "Memory allocation failure\n");
       exit(1);
     }
-
     printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id
-    int cd = acceptCon(*sd); //wait for a client to connect
+    
     //memset(packet, 0, sizeof(packet));
 
     if (initFileTransfer(cd, info)){
       uint8_t * fileContents; //+1 to allow for null term
       fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
       uint8_t * ptr = fileContents; // set pointer to start of fileContents
-
+      strcat(folder, (*info).filename);
       while(!done){
 	received = recv(cd, packet, len, 0);
 	if(packet[0] == 'D'){
@@ -263,30 +266,38 @@ void* worker(void * arg) { //this is the function that threads will call
 	  done = 1;
 	  break;
 	}
-	
 	if (packet[0] == 'F'){
 	  //getMd5Digest(packet+1, info->fileLen, temp);
 	  //convertMd5ToString(filePath, temp);
 	  //strcat(folder, filePath); //concat file path with md5 digest
-	  strcat(folder, (*info).filename);
-	  int k = writeToFile(folder, packet+1, (*info).fileLen);
-	  if (k != 1) //check return value of write to file
-	    pthread_exit(NULL);
-	  done = 1;
-	  /*for (int i = 1; i < received; i++)
-	    
-	  //*ptr++ = packet[i]; // set 
-	  }*/
+	  
+	  for (int i = 1; i < received; i++)
+	    *ptr++ = packet[i]; // set 
+	
 	}
       }
-      // if (done){} // output to file
+      else{
+	free(info);
+	break;
+      }
+      int k;
+      if (done) {
+	k = writeToFile(folder, packet+1, info->fileLen);
+	close(cd);
+	break;
+      }
+      if (k != 1){ //check return value of write to file
+	free(info);
+	pthread_exit(NULL);
+      }
     }
-    //Function that actually transfers the file
-    free(info);
-    printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
+    
   }
+  //Function that actually transfers the file
+  //free(info);
+  printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
   //pthread_exit(NULL);
-    return NULL;
+  return NULL;
 }
 void inputHandler(int s) {
   running = 0;

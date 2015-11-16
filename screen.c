@@ -101,6 +101,10 @@ void clearBox(displayBox box){
   refresh();
 }
 
+
+// add waiting for client function
+
+
 int main(void){
   
   displayBox box, box2;
