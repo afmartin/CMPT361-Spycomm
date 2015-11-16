@@ -266,7 +266,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  uint8_t * pttr = packet;
 	  for (int i = 0; i < MAXLEN; i++){
 	    received = recv(cd, pttr, 1, 0);
-	    pttr++;
+	    *pttr++;
 	  }
 	  if(packet[0] == 'D'){
 	    free(fileContents);// check if client is finished sending
