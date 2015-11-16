@@ -263,7 +263,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	uint8_t * ptr = fileContents; // set pointer to start of fileContents
 	strcat(folder, (*info).filename);
 	while(!done){
-	  char * pttr = packet;
+	  uint8_t * pttr = packet;
 	  for (int i = 0; i < MAXLEN; i++){
 	    received = recv(cd, pttr, 1, 0);
 	    pttr++;
