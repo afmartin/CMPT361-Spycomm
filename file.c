@@ -47,7 +47,7 @@ uint8_t ** getFileArray(FILE* file, int fileSize) {
   }
 
   //byteArray[newLen+1] = '\0'; //add escape character
-  return 0;
+  return byteArray;
 }
 
 int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
