@@ -34,8 +34,9 @@ uint8_t ** getFileArray(FILE* file, int fileSize) {
   
   int amountOfPackets = fileSize / MAX_PACKET_LEN;
   uint8_t ** byteArray;
-  byteArray = (uint8_t **)malloc
-    ((sizeof(uint8_t) * MAX_PACKET_LEN) * amountOfPackets);
+  byteArray = malloc(sizeof(uint8_t *) * amountOfPackets);
+  for (int i = 0; i < amountOfPackets; i++)
+    byteArray[i] = malloc(MAX_PACKET_LEN);
 
   //call fread on file
   for(int i = 0; i < amountOfPackets; i++){
@@ -50,7 +51,7 @@ uint8_t ** getFileArray(FILE* file, int fileSize) {
   return byteArray;
 }
 
-int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
+int writeToFile(char* filename, uint8_t **byteArray, int fileSize) {
   int i, k;
   uint8_t chr;
   FILE *fp;
@@ -66,7 +67,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int fileSize) {
   }
   //DONES;
   for (i = 0; i < k; i++) { //iterate through array
-    chr = byteArray[i];
+    chr = *byteArray[i];
     if (chr == EOF) {
       break;
     }

@@ -35,7 +35,7 @@ Description:
 #define MAX_THREAD 5
 #define TRUE 1
 #define FALSE 0
-#define MAXLEN 1000
+#define MAXLEN 512
 #define MAX_FILE_NAME 64
 #define MAX_MD5LEN 16
 #define MAX_FILE_LENGTH_AS_STRING 10
