@@ -250,9 +250,10 @@ int main (int argc, char * argv[]){
 	snprintf(fileLenAsString, 10, "%d", *fileSize);
 	
 	initiateFileTransfer(sock, opts->filePath, fileLenAsString, "S8267SHASKDJHKAD");
+	printf("Got Here!\n");
 	
-	uint8_t * fileData = malloc(*fileSize);
-	getFileArray(fp, *fileSize, fileData);
+	uint8_t ** fileData = getFileArray(fp, *fileSize);
+	printf("Got the file data!\n");
 	close(fd);
 	fp = NULL;
 	
@@ -262,19 +263,26 @@ int main (int argc, char * argv[]){
 	int * sent = malloc(sizeof(int));
 	*sent = 1;
 	
-	uint8_t * data = malloc(*fileSize + 1);
+	int numberOfTimes = *fileSize / MAX_PACKET_LEN;
+	
+	uint8_t * data = malloc(MAX_PACKET_LEN);
 	data[0] = (*(uint8_t *) type);
-	memcpy(data + 1, fileData, *fileSize);
-	
-	*sent = *fileSize + 1;
-	
+	memcpy(data + 1, *fileData, MAX_PACKET_LEN);
+	*sent = MAX_PACKET_LEN;
 	sendAll(sock, data, sent);
+	
+	printf("Done!\n");
+	for (int i = 1; i < numberOfTimes; i++){
+		printf("Loop!\n");
+		memcpy(data, fileData[i], MAX_PACKET_LEN);
+		*sent = MAX_PACKET_LEN;
+		sendAll(sock, data, sent);
+	}
+	
 	type[0] = 'D';
 	sendAll(sock,  (uint8_t *) &type[0], sent);
 	
-	printByteArray(data, *fileSize + 1);
-	
-	writeToFile("Test", data, *fileSize + 1);
+	printByteArray(fileData, *fileSize + 1);
 	
 	free(fileData);
 	
