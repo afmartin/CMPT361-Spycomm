@@ -1,3 +1,4 @@
+
 /*
 
 VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
@@ -34,69 +35,69 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 
 //This is a struct to hold the command line strings
 struct commandLine {
-	char address[IPV6_ADDRLEN];
-	char ports[MAX_PORTS_LEN];
-	char padPath[MAX_PATH_LEN];
-	char filePath[MAX_PATH_LEN];
+  char address[IPV6_ADDRLEN];
+  char ports[MAX_PORTS_LEN];
+  char padPath[MAX_PATH_LEN];
+  char filePath[MAX_PATH_LEN];
 };
 
 //Grabs the command line options and places them into their
 //coresponding parts of the commandLine Struct
 struct commandLine * getOptions (int argc, char * argv[]){
-	struct commandLine * options = malloc(sizeof(struct commandLine));
-		
-	if (options == NULL){
-		printf("Memory allocation failed!\n");
-		exit(1);
-	}
-	
-	int opt;
-	
-	while((opt = getopt(argc, argv, OPTSTRING)) != -1){
-		switch (opt){
-			case 'h':
-				printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
-				exit(0);
-				break;
-			case 'c':
-				strncpy(options->address, optarg, IPV6_ADDRLEN);
-				break;
-			case 'p':
-				strncpy(options->ports, optarg, MAX_PORTS_LEN);
-				break;
-			case 'o':
-				strncpy(options->padPath, optarg, MAX_PATH_LEN);
-				break;
-			case 'f':
-				strncpy(options->filePath, optarg, MAX_PATH_LEN);
-				break;
-			default:
-				printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
-				exit(0);
-				break;
-		}
-	}
-	
-	return options;
+  struct commandLine * options = malloc(sizeof(struct commandLine));
+  
+  if (options == NULL){
+    printf("Memory allocation failed!\n");
+    exit(1);
+  }
+  
+  int opt;
+  
+  while((opt = getopt(argc, argv, OPTSTRING)) != -1){
+    switch (opt){
+    case 'h':
+      printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
+      exit(0);
+      break;
+    case 'c':
+      strncpy(options->address, optarg, IPV6_ADDRLEN);
+      break;
+    case 'p':
+      strncpy(options->ports, optarg, MAX_PORTS_LEN);
+      break;
+    case 'o':
+      strncpy(options->padPath, optarg, MAX_PATH_LEN);
+      break;
+    case 'f':
+      strncpy(options->filePath, optarg, MAX_PATH_LEN);
+      break;
+    default:
+      printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
+      exit(0);
+      break;
+    }
+  }
+  
+  return options;
 }
 
 //Build and addrinfo struct linkedlist given an address and port
 struct addrinfo * buildAddrInfo (char * address, char * port){
-	
-	struct addrinfo hints, *res;
-	memset(&hints, 0, sizeof(struct addrinfo));
-	
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	
-	int returnCode = getaddrinfo(address, port, &hints, &res);
-	
-	if (returnCode != 0){
-		perror("Getaddrinfo failure: ");
-		exit(1);
-	}
-	
-	else{
+  
+  struct addrinfo hints, *res;
+  memset(&hints, 0, sizeof(struct addrinfo));
+  
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  
+  int returnCode = getaddrinfo(address, port, &hints, &res);
+  
+  if (returnCode != 0){
+    perror("Getaddrinfo failure: ");
+    exit(1);
+  }
+  
+  else{
 		return res;
 	}
 	
@@ -111,18 +112,18 @@ int getSocket (struct addrinfo * info){
 	
 	//iterates through the list and attempts to make a socket
 	for (iter = info; iter; iter=iter->ai_next){
-		sock =  socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
-		if (sock == -1){
-			perror("Socket creation: ");
-			iter = iter->ai_next;
-			continue;
-		}
-		break;
+	  sock =  socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
+	  if (sock == -1){
+	    perror("Socket creation: ");
+	    iter = iter->ai_next;
+	    continue;
+	  }
+	  break;
 	}
 	
 	if (iter == NULL && sock == -1){
-		fprintf(stderr, "Failed to make a socket!/n");
-		exit(1);
+	  fprintf(stderr, "Failed to make a socket!/n");
+	  exit(1);
 	}
 	
 	return sock;
@@ -131,13 +132,13 @@ int getSocket (struct addrinfo * info){
 
 //takes a socket and an addrinfo struct and attempts to conncet to a remote host
 int connectTo (int sock, struct addrinfo * info){
-	
-	int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
-	
-	if (returnCode != 0){
-		fprintf(stderr, "Failed to connect!/n");
-		return sock;
-	}
+  
+  int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
+  
+  if (returnCode != 0){
+    fprintf(stderr, "Failed to connect!/n");
+    return sock;
+  }
 	
 	return sock;
 }
