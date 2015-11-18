@@ -232,22 +232,25 @@ int acceptCon(int socket) {
 }
 
 void* worker(void * arg) { //this is the function that threads will call
+  
   int done = 0;
   int k = 0;
-  uint8_t* temp;
-  char* filePath;
-  char folder[100] = "./serverfiles/";
+  //uint8_t* temp;
+  //char* filePath;
   int * sd = (int*) arg;
-  uint8_t packet[MAXLEN];
-  size_t len = MAXLEN;
+  uint8_t packet[MAXLEN+1];
+  //size_t len = MAXLEN;
   ssize_t received;
+  uint8_t * fileContents; //+1 to allow for null term
+  uint8_t * pttr;
+
   
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id		  
   while (TRUE){
     int cd = acceptCon(*sd); //wait for a client to connect
     
     
-    while (cd) { //threads will run forever
+    while (cd) { // full file transfer loop, allows for multiple filetrans
       fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
       if (info == NULL) {
 	fprintf(stderr, "Memory allocation failure\n");
@@ -255,44 +258,52 @@ void* worker(void * arg) { //this is the function that threads will call
       }
       
       
-      //memset(packet, 0, sizeof(packet));
-      
       if (initFileTransfer(cd, info)){
-	uint8_t * fileContents; //+1 to allow for null term
-	fileContents = malloc(sizeof(uint8_t) * (*info).fileLen);
+	
+	fileContents = malloc(sizeof(uint8_t) * info->fileLen);
 	uint8_t * ptr = fileContents; // set pointer to start of fileContents
-	strcat(folder, (*info).filename);
-	while(!done){
-	  uint8_t * pttr = packet;
-	  for (int i = 0; i < MAXLEN; i++){
-	    received = recv(cd, pttr, 1, 0);
-	    *pttr++;
-	  }
-	  if(packet[0] == 'D'){
-	    free(fileContents);// check if client is finished sending
+
+	while(!done){ // accepting a single file loop
+	  
+	  pttr = packet;
+	  //printByteArray(packet);
+	  // receiv one byte at a time and insert into buffer
+	  for (int i = 0; i < MAXLEN+1; i++)
+	    recv(cd, pttr++, 1, 0);
+
+	  //printByteArray(packet);
+	  if(packet[0] == (uint8_t) 'D'){
+	    DONE;
+	    //free(fileContents);// check if client is finished sending
 	    done = 1;
 	    break;
 	  }
-	  if (packet[0] == 'F'){
+	  if (packet[0] == (uint8_t) 'F'){
+	    DONE;
 	    //getMd5Digest(packet+1, info->fileLen, temp);
 	    //convertMd5ToString(filePath, temp);
 	    //strcat(folder, filePath); //concat file path with md5 digest
 	    
-	    for (int i = 1; i < received; i++)
+	    for (int i = 1; i < MAXLEN; i++){
 	      *ptr++ = packet[i]; // set 
+	      printf("%c", packet[i]);
+	    }
 	    
 	  }
+	  memset(packet, 0, sizeof(packet));
 	}
-      
-	memset(packet, 0, sizeof(packet));
-      
+	
+	
+	
       } else{
 	free(info);
-	done = 1;
 	break;
       }
+      char folder[100] = "serverfiles/";
+      strcat(folder, (*info).filename);
+      k = writeToFile(folder, fileContents);
       if (done) {
-	k = writeToFile(folder, packet+1, info->fileLen);
+	
 	close(cd);
 	break;
       }
@@ -320,8 +331,8 @@ int main(int argc, char* argv[]) {
   while ((opt = getopt(argc, argv, "hp:")) != -1) {
 
     switch(opt) {
-    /* Reference used from www.gnu.org/software/libc/manual/html_node/Example-of                                   
-       _Getopt.html */
+      /* Reference used from www.gnu.org/software/libc/manual/html_node/Example-of                                   
+	 _Getopt.html */
       
     case 'h':
       printUsage(argv[0]);
@@ -338,17 +349,17 @@ int main(int argc, char* argv[]) {
   
   sd = getSocket(port); //This should be in netCode.h
   for (i = 0; i < MAX_THREAD; i++) { //create threads
-      pthread_create(&tid[i], NULL, worker, &sd);
+    pthread_create(&tid[i], NULL, worker, &sd);
   }
-
+  
   signal(SIGINT, inputHandler); //catch ctrl-c
   while(running) { //busy wait 
   }
-
+  
   printf("Killing threads...\n");
   for (i = 0; i < MAX_THREAD; i++) {
     pthread_kill(tid[i], SIGKILL);
   }
   return 0;
 }
-  
+
