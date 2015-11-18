@@ -32,14 +32,14 @@ size_t getFileSize(int fd) {
 
 uint8_t ** getFileArray(FILE* file, int fileSize) {
   
-  int amountOfPackets = fileSize / MAX_PACKET_LEN;
+  int amountOfPackets = fileSize / MAX_PACKET_LEN ;
   uint8_t ** byteArray;
   byteArray = malloc(sizeof(uint8_t *) * amountOfPackets);
-  for (int i = 0; i < amountOfPackets; i++)
+  for (int i = 0; i < amountOfPackets+1; i++)
     byteArray[i] = malloc(MAX_PACKET_LEN);
 
   //call fread on file
-  for(int i = 0; i < amountOfPackets; i++){
+  for(int i = 0; i < amountOfPackets+1; i++){
     size_t read = fread(byteArray[i], 1, MAX_PACKET_LEN, file);
     if (read == 0) {
       fprintf(stderr, "Error reading file\n");
@@ -51,12 +51,12 @@ uint8_t ** getFileArray(FILE* file, int fileSize) {
   return byteArray;
 }
 
-int writeToFile(char* filename, uint8_t **byteArray, int fileSize) {
+int writeToFile(char* filename, uint8_t *byteArray) {
   int k;
   uint8_t uint8Chr;
   FILE *fp;
 
-  k = fileSize / MAX_PACKET_LEN; //calculate how many indexes in array
+  k = MAX_PACKET_LEN; //calculate how many indexes in array
   //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
@@ -66,28 +66,25 @@ int writeToFile(char* filename, uint8_t **byteArray, int fileSize) {
     return -1;
   }
   //DONES;
-  for (int i = 0; i < k; i++) { //iterate through array
-    for (int ii = 0; ii < MAX_PACKET_LEN; ii++){
-      uint8Chr = *byteArray[i];
-      if (uint8Chr == EOF) 
-	break;
-      char c = (char) uint8Chr; 
-      fwrite(&c, 1, sizeof(c), fp); //write character to file
-    }
+  for (int i = 1; i < k; i++) { //iterate through array
+    //for (int ii = 0; ii < MAX_PACKET_LEN; ii++){
+    uint8Chr = byteArray[i];
+    if (uint8Chr == EOF) 
+      break;
+    unsigned char c = (unsigned char) uint8Chr; 
+    fwrite(&c, 1, sizeof(c), fp); //write character to file
   }
-  //DONES;
+  
   fclose(fp);
-  printf("Closed the file!\n");
+  //printf("Closed the file!\n");
   return 1;
 }
 
-void printByteArray(uint8_t ** byteArray, int fileSize) {
-  int k;
-  k = fileSize / MAX_PACKET_LEN;  
+void printByteArray(uint8_t * byteArray) {
 
-  for (int i = 0; i < k; i++)
-    for (int ii = 0; ii < MAX_PACKET_LEN; ii++)
-      fprintf(stdout, "%x ", byteArray[i][ii]);
+  //for (int i = 0; i < k+1; i++)
+  for (int i = 0; i < MAX_PACKET_LEN; i++)
+    fprintf(stdout, "%c ", byteArray[i]);
 }
 	       
 //main function used to test above functions

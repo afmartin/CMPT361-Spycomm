@@ -32,6 +32,7 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #define T_TYPE 'T'
 #define F_TYPE 'F'
 
+#define DONE   printf("Done!\n");
 
 //This is a struct to hold the command line strings
 struct commandLine {
@@ -153,7 +154,8 @@ int sendAll(int sock, uint8_t * buffer, int  * len){
 	int sent = 0;
 	int left = *len;
 	int ret;
-		
+	
+	printf("%c \n", buffer[0]);
 	while (sent < *len){
 		ret = send(sock, buffer + sent, left, 0);
 		if (ret == -1){ return -1; }
@@ -186,7 +188,7 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	position += strlen(length) + 1;
 	memcpy(position, padID, strlen(padID) + 1);
 	
-	printf("%d\n",initStringLen);
+	//printf("%d\n",initStringLen);
 	for(int i = 0; i < initStringLen; i++){
 		printf("%c", initString[i]);
 	}
@@ -226,70 +228,71 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 
 int main (int argc, char * argv[]){
 
-	struct commandLine * opts = getOptions(argc, argv);
+  struct commandLine * opts = getOptions(argc, argv);
+  
+  printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
+  
+  struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
+  
+  int sock = getSocket(serverInfo);
+  
+  printf("Got a socket!\n");
+  
+  connectTo(sock, serverInfo);
+  
+  
+  
+  
+  FILE * fp = fopen(opts->filePath, "r");
+  int fd;
+  fd = fileno(fp);
+  int fileSize;
+  fileSize = getFileSize(fd);
+  printf("%d\n", fileSize);
+  char fileLenAsString[10];
+  snprintf(fileLenAsString, 10, "%d", fileSize);
+  
+  initiateFileTransfer(sock, opts->filePath, fileLenAsString, "S8267SHASKDJHKAD");
+  printf("Got Here!\n");
+  uint8_t  ** fileData = getFileArray(fp, fileSize);
+  printf("Got the file data!\n");
+  close(fd);
+  fp = NULL;
 	
-	printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
-	
-	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
-	
-	int sock = getSocket(serverInfo);
-	
-	printf("Got a socket!\n");
-	
-	connectTo(sock, serverInfo);
-	
-	
-	
-	
-	FILE * fp = fopen(opts->filePath, "r");
-	int fd;
-	fd = fileno(fp);
-	int * fileSize = malloc(sizeof(int));
-	*fileSize = getFileSize(fd);
-	
-	char * fileLenAsString = malloc(10);
-	snprintf(fileLenAsString, 10, "%d", *fileSize);
-	
-	initiateFileTransfer(sock, opts->filePath, fileLenAsString, "S8267SHASKDJHKAD");
-	printf("Got Here!\n");
-	
-	uint8_t ** fileData = getFileArray(fp, *fileSize);
-	printf("Got the file data!\n");
-	close(fd);
-	fp = NULL;
-	
-	char * type = malloc(1);
-	*type = 'F';
-	
-	int * sent = malloc(sizeof(int));
-	*sent = 1;
-	
-	int numberOfTimes = *fileSize / MAX_PACKET_LEN;
-	
-	uint8_t * data = malloc(MAX_PACKET_LEN);
-	data[0] = (*(uint8_t *) type);
-	memcpy(data + 1, *fileData, MAX_PACKET_LEN);
-	*sent = MAX_PACKET_LEN;
-	sendAll(sock, data, sent);
-	
-	printf("Done!\n");
-	for (int i = 1; i < numberOfTimes; i++){
-		printf("Loop!\n");
-		memcpy(data, fileData[i], MAX_PACKET_LEN);
-		*sent = MAX_PACKET_LEN;
-		sendAll(sock, data, sent);
-	}
-	
-	type[0] = 'D';
-	sendAll(sock,  (uint8_t *) &type[0], sent);
-	
-	printByteArray(fileData, *fileSize + 1);
-	
-	free(fileData);
-	
-	close(sock);
-	
-	freeaddrinfo(serverInfo);
+  //char * type = malloc(1);
+  //*type = 'F';
+  
+  int sent = 1;
+  
+  int numberOfPackets = fileSize / MAX_PACKET_LEN ;
+  printf("%d\n", numberOfPackets);
+  uint8_t * data = malloc(MAX_PACKET_LEN + 1);
+  data[0] = 'F';
+  /* //data[0] = (*(uint8_t *) type); */
+  /* memcpy(data + 1, *fileData, MAX_PACKET_LEN); */
+  /* *sent = MAX_PACKET_LEN; */
+  /* sendAll(sock, data, sent); */
+  
 
-	return 1;
+  for (int i = 0; i < numberOfPackets + 1; i++){
+    printf("Loop!\n");
+    data[0] = 'F';
+    memcpy(data+1, fileData[i], MAX_PACKET_LEN);
+    //printByteArray(fileData[i]);
+    sent = MAX_PACKET_LEN;
+    sleep(1);
+    sendAll(sock, data, &sent);
+  }
+
+  sent = 1;
+  sendAll(sock, (uint8_t *)  "D", &sent);
+  //printByteArray(fileData, fileSize + 1);
+  
+  /* for (int i = 0; i < numberOfPackets; i++) */
+  /*   free(fileData[i]); */
+  
+  close(sock);
+  freeaddrinfo(serverInfo);
+  
+  return 0;
 }
