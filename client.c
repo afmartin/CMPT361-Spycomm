@@ -18,19 +18,9 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include <arpa/inet.h>
 
 #include "file.h"
-
-#define IPV6_ADDRLEN 46
-#define MAX_PORTS_LEN 32
-#define MAX_PATH_LEN 64
-#define MD5LEN 16
+#include "netCode.h"
 
 #define OPTSTRING "hc:p:o:f:"
-
-//Maybe this could be in user.c?
-#define DEFAULT_PORT "36115"
-
-#define T_TYPE 'T'
-#define F_TYPE 'F'
 
 #define DONE   printf("Done!\n");
 
@@ -82,28 +72,6 @@ struct commandLine * getOptions (int argc, char * argv[]){
   return options;
 }
 
-//Build and addrinfo struct linkedlist given an address and port
-struct addrinfo * buildAddrInfo (char * address, char * port){
-  
-  struct addrinfo hints, *res;
-  memset(&hints, 0, sizeof(struct addrinfo));
-  
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  
-  int returnCode = getaddrinfo(address, port, &hints, &res);
-  
-  if (returnCode != 0){
-    perror("Getaddrinfo failure: ");
-    exit(1);
-  }
-  
-  else{
-		return res;
-	}
-	
-}
-
 //Gets a new socket given an addrinfo struct linkedlist
 int getSocket (struct addrinfo * info){
 	
@@ -128,44 +96,6 @@ int getSocket (struct addrinfo * info){
 	}
 	
 	return sock;
-}
-
-
-//takes a socket and an addrinfo struct and attempts to conncet to a remote host
-int connectTo (int sock, struct addrinfo * info){
-  
-  int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
-  
-  if (returnCode != 0){
-    fprintf(stderr, "Failed to connect!/n");
-    return sock;
-  }
-	
-	return sock;
-}
-
-
-//Given a uint8_t array sends the array until all the data is sent,
-//or something goes wrong. Takes a socket, the buffer, the length of buffer
-//and returns a boolean for success, and sets the len variable to the 
-//amount of bytes actually sent
-int sendAll(int sock, uint8_t * buffer, int  * len){
-	
-	int sent = 0;
-	int left = *len;
-	int ret;
-	
-	printf("%c \n", buffer[0]);
-	while (sent < *len){
-		ret = send(sock, buffer + sent, left, 0);
-		if (ret == -1){ return -1; }
-		sent += ret;
-		left -= ret;
-	}
-	
-	*len = sent;
-	
-	return 0;
 }
 
 //Sends the initialization to the server given the socket, filename, length of file,

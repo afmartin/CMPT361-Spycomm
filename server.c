@@ -22,23 +22,14 @@ Description:
 #include <signal.h>
 #include "server.h"
 #include "file.h"
+#include "netCode.h"
 //#include "digest.h"
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
 #define DEFAULT_PORT "36115" // This can change and should be in our protocol
-#define T_TYPE 'T'
-#define F_TYPE 'F'
-#define E_TYPE 'E'
-#define D_TYPE 'D'
 
 #define MAX_THREAD 5
-#define TRUE 1
-#define FALSE 0
-#define MAXLEN 512
-#define MAX_FILE_NAME 64
-#define MAX_MD5LEN 16
-#define MAX_FILE_LENGTH_AS_STRING 10
 
 /* typedef struct _threadArgs{ */
   
@@ -117,21 +108,6 @@ int getPadOffset(int padID) {
   /*takes padID as input, returns 0 if successful,
     otherwise returns the numbers we have for error
     codes in the protocol */
-}
-
-// function to send a string over a socket descriptor
-int send_string(int sd, uint8_t * buf){
-  
-  size_t queued = MAXLEN;
-  ssize_t sent;
-  while (queued > 0){
-    sent = send(sd, buf, queued, 0);
-    if (sent == -1)
-      return FALSE;
-    queued -= sent;
-    buf += sent;
-  }
-  return TRUE;
 }
 
 int initFileTransfer(int cd, fileInfo *info) {
@@ -213,23 +189,6 @@ int initFileTransfer(int cd, fileInfo *info) {
   return TRUE;
 }
 
-
-
-int acceptCon(int socket) {
-  /* Handles client requests 
-     will be updated to support Port Knocking */
-
-  struct sockaddr_storage clientAddr;
-  socklen_t clientAddrLen = sizeof(clientAddr);
-  int cd;
-
-  cd = accept(socket, (struct sockaddr *) &clientAddr, &clientAddrLen);
-  if (cd == -1) {
-    fprintf(stderr, "Error accepting connections\n");
-    exit(1);
-  }
-  return cd;
-}
 
 void* worker(void * arg) { //this is the function that threads will call
   
