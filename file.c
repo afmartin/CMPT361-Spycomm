@@ -15,6 +15,7 @@ Description:
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <time.h>
 #include "file.h"
 
 //#define DONES printf("done");
@@ -85,6 +86,23 @@ void printByteArray(uint8_t * byteArray) {
   //for (int i = 0; i < k+1; i++)
   for (int i = 0; i < MAX_PACKET_LEN; i++)
     fprintf(stdout, "%c ", byteArray[i]);
+}
+
+char* getCurrentTime() {
+  /* referenced from stackoverflow.com/questions/5141960/get-the-current-time-in-c */
+
+  time_t currTime;
+  struct tm* timeInfo;
+  char* timeString;
+
+  time (&currTime);
+  timeInfo= localtime(&currTime);
+
+  timeString = asctime(timeInfo);
+  printf("Current local time and date: %s\n", timeString);
+
+  return timeString;
+
 }
 	       
 //main function used to test above functions
