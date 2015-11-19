@@ -22,7 +22,6 @@ int recvAll (int sock, int amount, uint8_t * dest){
 			perror("recv: ");
 			return -1;
 		}
-		printf("%c\n", *pos);
 		pos += received;
 	}
 	return amount;
@@ -66,7 +65,6 @@ int sendAll(int sock, uint8_t * buffer, int len){
 		if (ret == -1){ return -1; }
 		sent += ret;
 		left -= ret;
-		printf("%c\n", *buffer);
 	}
 	
 	return sent;

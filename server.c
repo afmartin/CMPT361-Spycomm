@@ -200,6 +200,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	uint8_t packet[MAXLEN + 1];
 	memset(packet, 0 , MAXLEN + 1);
 	//size_t len = MAXLEN;
+	uint8_t ack = 'A';
 	
 	uint8_t * fileContents; //+1 to allow for null term
 
@@ -223,19 +224,22 @@ void* worker(void * arg) { //this is the function that threads will call
 				uint8_t * ptr = fileContents; // set pointer to start of fileContents
 				while(!done){ // accepting a single file loop
 					
+					//Determines how many bytes we need to receive
+					//Either the Max packet length, or whatever is 
+					//remaining at the end of the file
 					int get;
-					if (info->fileLen - (ptr - fileContents) < MAXLEN + 1){
-						get = info->fileLen - (ptr - fileContents);
+					int left = info->fileLen - (ptr - fileContents);
+					if (left < MAXLEN + 1){
+						get = left;
 					}
 					else {
 						get = MAXLEN;
 					}
 					
-					printf("Getting: %d\n", get);
-					printf("%d - (%lu - %lu)  = %lu or %d < %d\n", info->fileLen, (unsigned long) ptr, (unsigned long) fileContents, info->fileLen - ((unsigned long) ptr - (unsigned long) fileContents), get, MAXLEN + 1);
+					//Send an acknowledgement so the client knows when it should send data
+					sendAll(cd, &ack, sizeof(ack));
 					
-					send_string(cd, (uint8_t *) "A");
-					
+					//If we are done receiving, get the 'D'
 					if (get == 0){
 						int didRecv = recv(cd, packet, 1, 0);
 						if (didRecv == -1){
@@ -243,11 +247,9 @@ void* worker(void * arg) { //this is the function that threads will call
 						pthread_exit(NULL);
 						}
 					}
+					//Otherwise, recv as much as we need
 					else {
-						printf("Got before \n");
 						int didRecv = recvAll(cd, get + 1, packet);
-						printf("Got After %d\n", didRecv);
-						printf("%c\n", packet[0]);
 						if (didRecv == -1){
 							perror("");
 							printf("Received Failed!\n");
@@ -260,27 +262,25 @@ void* worker(void * arg) { //this is the function that threads will call
 					}
 					
 					//printByteArray(packet);
+					
+					//if we receive the 'D'
 					if(packet[0] == (uint8_t) 'D'){
-						DONE;
-						//free(fileContents);// check if client is finished sending
-						sendAll(cd, (uint8_t *) 'A', 1);
+						//DONE;
+						sendAll(cd, &ack, sizeof(ack));
 						done = 1;
 						break;
 					}
+					//if we receive another packet
 					else if (packet[0] == (uint8_t) 'F'){
 						//DONE;
 						//getMd5Digest(packet+1, info->fileLen, temp);
 						//convertMd5ToString(filePath, temp);
 						//strcat(folder, filePath); //concat file path with md5 digest
 						
-						/* for (int i = 1; i < MAXLEN; i++){
-							*ptr++ = packet[i]; // set 
-							printf("%c", packet[i]);
-						} */
-						
+						//copy the data from the packet into the fileContents
+						//And then increment the pointer
 						memcpy(ptr, packet + 1, get);
 						ptr += get;
-						
 					}
 					else {
 						printf("Received erroneous data!\n");
@@ -292,26 +292,27 @@ void* worker(void * arg) { //this is the function that threads will call
 				free(info);
 				break;
 			}
+			//Add a folder prefix
 			char folder[100] = "./serverfiles/";
 			strcat(folder, (*info).filename);
 			
+			//Open a file and write the fileContents to it
 			FILE * fp = fopen(folder, "wb+");
-			fwrite(fileContents, 1, info->fileLen + 1, fp);
+			k = fwrite(fileContents, 1, info->fileLen + 1, fp);
 			fclose(fp);
 			
 			if (done) {
 				close(cd);
 				break;
 			}
+			free(info);
+			free(fileContents);
 		}
-		k = 1;
-		if (k != 1){ //check return value of write to file
+		if (k == -1){ //check return value of write to file
 			close(cd);
 			printf("Write to File failed!\n");
 			pthread_exit(NULL);
 		}
-		//Function that actually transfers the file
-		//free(info);
 		printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
 	}
 	//pthread_exit(NULL);

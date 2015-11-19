@@ -197,18 +197,19 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 	//Sends the initialization data
 	initiateFileTransfer(sock, fileName, fileLenAsString, hash);
 	
-	uint8_t * wait = malloc(1);
-	memset(wait, 0, 1);
+	
+	//Waits for an acknowledgement before sending data
+	//to ensure the server is ready to receive
+	uint8_t wait;
 	int checkRet;
-	checkRet = recv(sock, wait, 1, 0);
-	if (checkRet == -1 || *wait != 'A'){
+	checkRet = recv(sock, &wait, 1, 0);
+	if (checkRet == -1 || wait != (uint8_t) 'A'){
 		perror("-1?");
-		printf("Protocol Error! %d \n", *wait);
+		printf("Protocol Error! %d \n", wait);
 		exit(1);
 	}
 	
-	sleep(5);
-	printf("YAY\n");
+	sleep(1);
 	
 	//Create the buffer for the Packet to be sent
 	uint8_t buffer[MAX_PACKET_LEN + 1];
@@ -224,17 +225,23 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 		}
 		
 		int sent = sendAll(sock, buffer, read + 1);
-		printf("sent: %d = %s\n", sent, buffer);
+		if (sent == -1){
+			printf("Failure to send!\n");
+			exit(1);
+		}
 	}
 	close(fd);
 	
+	//Send a 'D' to indicate file transfer completion
 	uint8_t done = 'D';	
 	sendAll(sock, &done, sizeof(uint8_t));
 	
-	checkRet = recv(sock, wait, sizeof(uint8_t), 0);
-	if (checkRet == -1 || *wait != 'A'){
+	
+	//Wait for an acknowledgement before closing the connection
+	checkRet = recv(sock, &wait, sizeof(uint8_t), 0);
+	if (checkRet == -1 || wait != (uint8_t) 'A'){
 		perror("-1?");
-		printf("Protocol Error! %c \n", *((char *) wait));
+		printf("Protocol Error! %d \n", wait);
 		exit(1);
 	}
 	
@@ -247,18 +254,9 @@ int main (int argc, char * argv[]){
 
 	struct commandLine * opts = getOptions(argc, argv);
 	
-	  printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
-  printf("Files to send are: ");
-  for(int i = 0; i < MAX_FILES_LEN; i++){
-	  if (opts->filePath[i] == '\0'){
-		  printf(" ");
-	  }
-	  else {
-		printf("%c", opts->filePath[i]);
-	}
-  }
-  printf("\n");
+	printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
   
 	sendFile(opts->address, opts->ports, opts->filePath, "PLEASEWORK!!!!!!");
+	
 	return 0;
 }
