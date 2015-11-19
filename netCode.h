@@ -38,6 +38,11 @@ int connectTo (int sock, struct addrinfo * info);
 // function to send a string over a socket descriptor
 int send_string(int sd, uint8_t * buf);
 
+
+
+//Inspired by code seen in Beej's Guide to Network Programming
+//http://beej.us/guide/bgnet/
+
 //Given a uint8_t array sends the array until all the data is sent,
 //or something goes wrong. Takes a socket, the buffer, the length of buffer
 //and returns a boolean for success, and sets the len variable to the 

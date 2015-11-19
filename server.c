@@ -27,7 +27,7 @@ Description:
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36116" // This can change and should be in our protocol
+#define DEFAULT_PORT "36115" // This can change and should be in our protocol
 
 #define MAX_THREAD 5
 

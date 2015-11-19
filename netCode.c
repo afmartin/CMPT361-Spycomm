@@ -54,6 +54,8 @@ int connectTo (int sock, struct addrinfo * info){
 	return sock;
 }
 
+//Inspired by code seen in Beej's Guide to Network Programming
+//http://beej.us/guide/bgnet/
 int sendAll(int sock, uint8_t * buffer, int len){
 	
 	int sent = 0;

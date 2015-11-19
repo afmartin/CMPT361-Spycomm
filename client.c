@@ -9,7 +9,7 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <time.h>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -34,6 +34,7 @@ struct commandLine {
   char ports[MAX_PORTS_LEN];
   char padPath[MAX_PATH_LEN];
   char filePath[MAX_FILES_LEN];
+  int fileNum;
 };
 
 //Grabs the command line options and places them into their
@@ -93,6 +94,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
 		filePathPos += strlen(argv[argvPos]) + 1;
 		argvPos++;
 		count--;
+		options->fileNum++;
 	}
 	options->filePath[++filePathPos] = '\0';
   
@@ -204,16 +206,19 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 	int checkRet;
 	checkRet = recv(sock, &wait, 1, 0);
 	if (checkRet == -1 || wait != (uint8_t) 'A'){
-		perror("-1?");
-		printf("Protocol Error! %d \n", wait);
+		perror("Error Receiving Ack");
+		printf("%c\n", wait);
 		exit(1);
 	}
-	
-	sleep(1);
+
 	
 	//Create the buffer for the Packet to be sent
 	uint8_t buffer[MAX_PACKET_LEN + 1];
 	memset(buffer, 0, MAX_PACKET_LEN + 1);
+	
+	int barWidth = 60;
+	
+	sleep(1);
 	
 	//Send out as many packets as there is data
 	for (int i = 0; i <= fileSize / (MAX_PACKET_LEN); i++){
@@ -229,8 +234,22 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 			printf("Failure to send!\n");
 			exit(1);
 		}
+		
+		int percent = ((i * 100) / (fileSize / (MAX_PACKET_LEN)));
+		//printf("%2d%%  %d =  %d ' '\n", i / (fileSize / (MAX_PACKET_LEN)), ((percent * barWidth) / 100), (((100 - percent) * barWidth) / 100));
+		
+		printf("%2d%% [", percent);
+		for (int j = 0; j < ((percent * barWidth) / 100); j++){
+			printf("=");
+		}
+		for (int j = 0; j < (((100 - percent) * barWidth) / 100); j++){
+			printf(" ");
+		}
+		printf("] %dB Sent         \r", (int)((i * MAX_PACKET_LEN) + sent));
 	}
+	printf("\nCompleted\n");
 	close(fd);
+	
 	
 	//Send a 'D' to indicate file transfer completion
 	uint8_t done = 'D';	
@@ -240,8 +259,7 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 	//Wait for an acknowledgement before closing the connection
 	checkRet = recv(sock, &wait, sizeof(uint8_t), 0);
 	if (checkRet == -1 || wait != (uint8_t) 'A'){
-		perror("-1?");
-		printf("Protocol Error! %d \n", wait);
+		perror("Error Receiving Ack");
 		exit(1);
 	}
 	
@@ -253,10 +271,21 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 int main (int argc, char * argv[]){
 
 	struct commandLine * opts = getOptions(argc, argv);
-	
 	printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
-  
-	sendFile(opts->address, opts->ports, opts->filePath, "PLEASEWORK!!!!!!");
+	
+	int pos = 0;
+	for(int i = 0; i < opts->fileNum; i++){
+		char fileToSend[MAX_PATH_LEN];
+		strncpy(fileToSend, &(opts->filePath[pos]), MAX_PATH_LEN);
+		
+		printf("\nSending: %s\n", fileToSend);
+		
+		sendFile(opts->address, opts->ports, fileToSend, "PLEASEWORK!!!!!!");
+	
+		pos += strlen(fileToSend) + 1;
+	}
+	
+	free(opts);
 	
 	return 0;
 }
