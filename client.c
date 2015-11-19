@@ -20,7 +20,9 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include "file.h"
 #include "netCode.h"
 
-#define OPTSTRING "hc:p:o:f:"
+#define OPTSTRING "hc:p:o:"
+
+#define USAGE "Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\" file1 file2 file3\n", argv[0]
 
 #define DONE   printf("Done!\n");
 
@@ -29,47 +31,70 @@ struct commandLine {
   char address[IPV6_ADDRLEN];
   char ports[MAX_PORTS_LEN];
   char padPath[MAX_PATH_LEN];
-  char filePath[MAX_PATH_LEN];
+  char filePath[MAX_FILES_LEN];
 };
 
 //Grabs the command line options and places them into their
 //coresponding parts of the commandLine Struct
 struct commandLine * getOptions (int argc, char * argv[]){
-  struct commandLine * options = malloc(sizeof(struct commandLine));
+	struct commandLine * options = malloc(sizeof(struct commandLine));
   
-  if (options == NULL){
-    printf("Memory allocation failed!\n");
-    exit(1);
-  }
+	if (options == NULL){
+		printf("Memory allocation failed!\n");
+		exit(1);
+	}
   
-  int opt;
+	int opt;
+	int count = argc - 1;
   
-  while((opt = getopt(argc, argv, OPTSTRING)) != -1){
-    switch (opt){
-    case 'h':
-      printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
-      exit(0);
-      break;
-    case 'c':
-      strncpy(options->address, optarg, IPV6_ADDRLEN);
-      break;
-    case 'p':
-      strncpy(options->ports, optarg, MAX_PORTS_LEN);
-      break;
-    case 'o':
-      strncpy(options->padPath, optarg, MAX_PATH_LEN);
-      break;
-    case 'f':
-      strncpy(options->filePath, optarg, MAX_PATH_LEN);
-      break;
-    default:
-      printf("Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\"\n", argv[0]);
-      exit(0);
-      break;
+	while((opt = getopt(argc, argv, OPTSTRING)) != -1){
+		switch (opt){
+			case 'h':
+				printf(USAGE);
+				exit(0);
+				break;
+			case 'c':
+				strncpy(options->address, optarg, IPV6_ADDRLEN);
+				count -= 2;
+				break;
+			case 'p':
+				strncpy(options->ports, optarg, MAX_PORTS_LEN);
+				count -= 2;
+				break;
+			case 'o':
+				strncpy(options->padPath, optarg, MAX_PATH_LEN);
+				count -= 2;
+				break;
+			default:
+				printf(USAGE);
+				exit(0);
+				break;
+		}
+	}
+  
+    if(count <= 0){
+	    printf("No files listed!\n");
+	    printf(USAGE);
     }
-  }
+	
+	memset(options->filePath, 0, MAX_FILES_LEN);
+	
+	int argvPos = optind;
+	int filePathPos = 0;
   
-  return options;
+	while (count != 0){
+		if (filePathPos + strlen(argv[argvPos]) + 1 > MAX_FILES_LEN){
+			printf("Too Many files chosen!\n");
+			exit(0);
+		}
+		strncpy(&(options->filePath[filePathPos]), argv[argvPos], MAX_PATH_LEN);
+		filePathPos += strlen(argv[argvPos]) + 1;
+		argvPos++;
+		count--;
+	}
+	options->filePath[++filePathPos] = '\0';
+  
+	return options;
 }
 
 //Gets a new socket given an addrinfo struct linkedlist
@@ -160,17 +185,29 @@ int main (int argc, char * argv[]){
 
   struct commandLine * opts = getOptions(argc, argv);
   
-  printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
-  
+/*   printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
+  printf("Files to send are: ");
+  for(int i = 0; i < MAX_FILES_LEN; i++){
+	  if (opts->filePath[i] == '\0'){
+		  printf(" ");
+	  }
+	  else {
+		printf("%c", opts->filePath[i]);
+	}
+  }
+  printf("\n"); */
+	
   struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
   
   int sock = getSocket(serverInfo);
   
   printf("Got a socket!\n");
   
-  connectTo(sock, serverInfo);
+  int ret = connectTo(sock, serverInfo);
   
-  
+  if (ret == -1){
+	  exit(0);
+  }
   
   
   FILE * fp = fopen(opts->filePath, "r");

@@ -11,12 +11,12 @@ AWESOME HEADER BLOCK
 #include <sys/socket.h>
 #include <netdb.h>
 
-
 #include <stdint.h>
 
 #define IPV6_ADDRLEN 46
 #define MAX_PORTS_LEN 32
 #define MAX_PATH_LEN 64
+#define MAX_FILES_LEN 512
 #define MD5LEN 16
 
 #define TRUE 1
@@ -43,6 +43,8 @@ int send_string(int sd, uint8_t * buf);
 //amount of bytes actually sent
 int sendAll(int sock, uint8_t * buffer, int  * len);
 
+
+//Accepts a new connection on the given socket
 int acceptCon(int socket);
 
 //Build and addrinfo struct linkedlist given an address and port
