@@ -20,6 +20,8 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include "file.h"
 #include "netCode.h"
 
+#define MAX_FILE_LENGTH_AS_STRING 10
+
 #define OPTSTRING "hc:p:o:"
 
 #define USAGE "Usage: %s [-h] -c \"SERVERADDRESS\" -p \"PORTS_TO_KNOCK\" -o \"PATH_TO_OTP\" file1 file2 file3\n", argv[0]
@@ -143,21 +145,15 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	position += strlen(length) + 1;
 	memcpy(position, padID, strlen(padID) + 1);
 	
-	//printf("%d\n",initStringLen);
+	/* //printf("%d\n",initStringLen);
 	for(int i = 0; i < initStringLen; i++){
 		printf("%c", initString[i]);
 	}
-	printf("\n");
+	printf("\n"); */
 	
 	
 	//Create a int to hold the length of bytes to send
-	//Will also hold the number of bytes sent after sendAll
-	int * sending = malloc(sizeof(int));
-	*sending = sizeof(initString);
-
-	//A check variable to see if the sent length is equal to
-	//actual length after the sendAll call
-	int check = initStringLen;
+	int sending = initStringLen;
 	
 	//Attempts to send all the data out
 	int sent = sendAll(sock, (uint8_t *) initString, sending); 
@@ -169,23 +165,89 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	}
 
 	//Check to see if all the data sent
-	if (*sending != check){
+	if (sent != sending){
 		fprintf(stderr, "Failed to send all the data!\n");
-		free(sending);
 		return 0;
 	}
-	//if it did all sent, return true
+	//if it did all send, return true
 	else {
-		free(sending);
 		return 1;
 	}
 }
 
+void sendFile (char * address, char * port, char * fileName, char * hash){
+
+	struct addrinfo * serverInfo = buildAddrInfo(address, port);
+
+	//Attempts to grab a new socket
+	int sock = getSocket(serverInfo);
+	int check = connectTo(sock, serverInfo);
+	if (check == -1){
+		fprintf(stderr, "Cannot connect to server!\n");
+		exit(0);
+	}
+	
+	//Get info about the file to send
+	FILE * fp = fopen(fileName, "r");
+	int fd = fileno(fp);
+	int fileSize = getFileSize(fd);
+	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
+	snprintf(fileLenAsString, MAX_FILE_LENGTH_AS_STRING, "%d", fileSize);
+	
+	//Sends the initialization data
+	initiateFileTransfer(sock, fileName, fileLenAsString, hash);
+	
+	uint8_t * wait = malloc(1);
+	memset(wait, 0, 1);
+	int checkRet;
+	checkRet = recv(sock, wait, 1, 0);
+	if (checkRet == -1 || *wait != 'A'){
+		perror("-1?");
+		printf("Protocol Error! %d \n", *wait);
+		exit(1);
+	}
+	
+	sleep(5);
+	printf("YAY\n");
+	
+	//Create the buffer for the Packet to be sent
+	uint8_t buffer[MAX_PACKET_LEN + 1];
+	memset(buffer, 0, MAX_PACKET_LEN + 1);
+	
+	//Send out as many packets as there is data
+	for (int i = 0; i <= fileSize / (MAX_PACKET_LEN); i++){
+		buffer[0] = 'F';
+		size_t read = fread(buffer + 1, 1, MAX_PACKET_LEN, fp);
+		if (read == -1){
+			fprintf(stderr, "An Error occured reading %s\n", fileName);
+			exit(0);
+		}
+		
+		int sent = sendAll(sock, buffer, read + 1);
+		printf("sent: %d = %s\n", sent, buffer);
+	}
+	close(fd);
+	
+	uint8_t done = 'D';	
+	sendAll(sock, &done, sizeof(uint8_t));
+	
+	checkRet = recv(sock, wait, sizeof(uint8_t), 0);
+	if (checkRet == -1 || *wait != 'A'){
+		perror("-1?");
+		printf("Protocol Error! %c \n", *((char *) wait));
+		exit(1);
+	}
+	
+	close(sock);
+	freeaddrinfo(serverInfo);
+
+}
+
 int main (int argc, char * argv[]){
 
-  struct commandLine * opts = getOptions(argc, argv);
-  
-/*   printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
+	struct commandLine * opts = getOptions(argc, argv);
+	
+	  printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
   printf("Files to send are: ");
   for(int i = 0; i < MAX_FILES_LEN; i++){
 	  if (opts->filePath[i] == '\0'){
@@ -195,71 +257,8 @@ int main (int argc, char * argv[]){
 		printf("%c", opts->filePath[i]);
 	}
   }
-  printf("\n"); */
-	
-  struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
+  printf("\n");
   
-  int sock = getSocket(serverInfo);
-  
-  printf("Got a socket!\n");
-  
-  int ret = connectTo(sock, serverInfo);
-  
-  if (ret == -1){
-	  exit(0);
-  }
-  
-  
-  FILE * fp = fopen(opts->filePath, "r");
-  int fd;
-  fd = fileno(fp);
-  int fileSize;
-  fileSize = getFileSize(fd);
-  printf("%d\n", fileSize);
-  char fileLenAsString[10];
-  snprintf(fileLenAsString, 10, "%d", fileSize);
-  
-  initiateFileTransfer(sock, opts->filePath, fileLenAsString, "S8267SHASKDJHKAD");
-  printf("Got Here!\n");
-  uint8_t  ** fileData = getFileArray(fp, fileSize);
-  printf("Got the file data!\n");
-  close(fd);
-  fp = NULL;
-	
-  //char * type = malloc(1);
-  //*type = 'F';
-  
-  int sent = 1;
-  
-  int numberOfPackets = fileSize / MAX_PACKET_LEN ;
-  printf("%d\n", numberOfPackets);
-  uint8_t * data = malloc(MAX_PACKET_LEN + 1);
-  data[0] = 'F';
-  /* //data[0] = (*(uint8_t *) type); */
-  /* memcpy(data + 1, *fileData, MAX_PACKET_LEN); */
-  /* *sent = MAX_PACKET_LEN; */
-  /* sendAll(sock, data, sent); */
-  
-
-  for (int i = 0; i < numberOfPackets + 1; i++){
-    printf("Loop!\n");
-    data[0] = 'F';
-    memcpy(data+1, fileData[i], MAX_PACKET_LEN);
-    //printByteArray(fileData[i]);
-    sent = MAX_PACKET_LEN;
-    sleep(1);
-    sendAll(sock, data, &sent);
-  }
-
-  sent = 1;
-  sendAll(sock, (uint8_t *)  "D", &sent);
-  //printByteArray(fileData, fileSize + 1);
-  
-  /* for (int i = 0; i < numberOfPackets; i++) */
-  /*   free(fileData[i]); */
-  
-  close(sock);
-  freeaddrinfo(serverInfo);
-  
-  return 0;
+	sendFile(opts->address, opts->ports, opts->filePath, "PLEASEWORK!!!!!!");
+	return 0;
 }

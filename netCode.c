@@ -11,20 +11,21 @@ AWESOME HEADER BLOCK
 #include <stdlib.h>
 #include <string.h>
 
-void recvAll (int sock, int amount, uint8_t * dest){
+int recvAll (int sock, int amount, uint8_t * dest){
 	
-	uint8_t temp;
-	int pos = 0;
+	uint8_t * pos = dest;
 	
-	while (pos < amount){
-		int received = recv(sock, &temp, sizeof(uint8_t), 0);
+	while (pos - dest < amount){
+		int received = recv(sock, pos, amount - (pos - dest), 0);
 		if (received == -1){
 			fprintf(stderr, "Error recieving data\n");
+			perror("recv: ");
+			return -1;
 		}
-		*dest = temp;
-		dest++;
-		pos++;
+		printf("%c\n", *pos);
+		pos += received;
 	}
+	return amount;
 }
 
 
@@ -54,23 +55,21 @@ int connectTo (int sock, struct addrinfo * info){
 	return sock;
 }
 
-int sendAll(int sock, uint8_t * buffer, int  * len){
+int sendAll(int sock, uint8_t * buffer, int len){
 	
 	int sent = 0;
-	int left = *len;
+	int left = len;
 	int ret;
 	
-	printf("%c \n", buffer[0]);
-	while (sent < *len){
+	while (sent < len){
 		ret = send(sock, buffer + sent, left, 0);
 		if (ret == -1){ return -1; }
 		sent += ret;
 		left -= ret;
+		printf("%c\n", *buffer);
 	}
 	
-	*len = sent;
-	
-	return 0;
+	return sent;
 }
 
 int acceptCon(int socket) {

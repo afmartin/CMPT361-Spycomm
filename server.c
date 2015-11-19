@@ -27,7 +27,7 @@ Description:
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36115" // This can change and should be in our protocol
+#define DEFAULT_PORT "36116" // This can change and should be in our protocol
 
 #define MAX_THREAD 5
 
@@ -171,7 +171,7 @@ int initFileTransfer(int cd, fileInfo *info) {
 	//Copy the string into the struct
 	strcpy(info->padID, temp);
 	
-    printf("%s -- %d -- %s", info->filename, info->fileLen, info->padID);
+    printf("%s -- %d -- %s\n", info->filename, info->fileLen, info->padID);
   }
   else return FALSE;
   
@@ -179,104 +179,143 @@ int initFileTransfer(int cd, fileInfo *info) {
   // save for later -->
   /*if ((msg[1] = getPadOffset(info->padID)) != 0) {
     msg[0] = E_TYPE;
-    }*/  
+    } 
   msg[1] = '\0';
   
   
   if (!send_string(cd, msg)) {
     fprintf(stderr, "Error sending response\n");
-  } 
+  } */
   return TRUE;
 }
 
 
 void* worker(void * arg) { //this is the function that threads will call
-  
-  int done = 0;
-  int k = 0;
-  //uint8_t* temp;
-  //char* filePath;
-  int * sd = (int*) arg;
-  uint8_t packet[MAXLEN+1];
-  //size_t len = MAXLEN;
-  ssize_t received;
-  uint8_t * fileContents; //+1 to allow for null term
-  uint8_t * pttr;
-
-  
-  printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id		  
-  while (TRUE){
-    int cd = acceptCon(*sd); //wait for a client to connect
-    
-    
-    while (cd) { // full file transfer loop, allows for multiple filetrans
-      fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
-      if (info == NULL) {
-	fprintf(stderr, "Memory allocation failure\n");
-	exit(1);
-      }
-      
-      
-      if (initFileTransfer(cd, info)){
 	
-	fileContents = malloc(sizeof(uint8_t) * info->fileLen);
-	uint8_t * ptr = fileContents; // set pointer to start of fileContents
+	int done = 0;
+	int k = 0;
+	//uint8_t* temp;
+	//char* filePath;
+	int * sd = (int*) arg;
+	uint8_t packet[MAXLEN + 1];
+	memset(packet, 0 , MAXLEN + 1);
+	//size_t len = MAXLEN;
+	
+	uint8_t * fileContents; //+1 to allow for null term
 
-	while(!done){ // accepting a single file loop
-	  
-	  pttr = packet;
-	  //printByteArray(packet);
-	  // receiv one byte at a time and insert into buffer
-	  for (int i = 0; i < MAXLEN+1; i++)
-	    recv(cd, pttr++, 1, 0);
-
-	  //printByteArray(packet);
-	  if(packet[0] == (uint8_t) 'D'){
-	    DONE;
-	    //free(fileContents);// check if client is finished sending
-	    done = 1;
-	    break;
-	  }
-	  if (packet[0] == (uint8_t) 'F'){
-	    DONE;
-	    //getMd5Digest(packet+1, info->fileLen, temp);
-	    //convertMd5ToString(filePath, temp);
-	    //strcat(folder, filePath); //concat file path with md5 digest
-	    
-	    for (int i = 1; i < MAXLEN; i++){
-	      *ptr++ = packet[i]; // set 
-	      printf("%c", packet[i]);
-	    }
-	    
-	  }
-	  memset(packet, 0, sizeof(packet));
+	
+	printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
+	while (TRUE){
+		int cd = acceptCon(*sd); //wait for a client to connect
+		
+		
+		while (cd) { // full file transfer loop, allows for multiple filetrans
+			fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
+			if (info == NULL) {
+				fprintf(stderr, "Memory allocation failure\n");
+				exit(1);
+			}
+			
+			
+			if (initFileTransfer(cd, info)){
+	
+				fileContents = malloc(sizeof(uint8_t) * info->fileLen);
+				uint8_t * ptr = fileContents; // set pointer to start of fileContents
+				while(!done){ // accepting a single file loop
+					
+					int get;
+					if (info->fileLen - (ptr - fileContents) < MAXLEN + 1){
+						get = info->fileLen - (ptr - fileContents);
+					}
+					else {
+						get = MAXLEN;
+					}
+					
+					printf("Getting: %d\n", get);
+					printf("%d - (%lu - %lu)  = %lu or %d < %d\n", info->fileLen, (unsigned long) ptr, (unsigned long) fileContents, info->fileLen - ((unsigned long) ptr - (unsigned long) fileContents), get, MAXLEN + 1);
+					
+					send_string(cd, (uint8_t *) "A");
+					
+					if (get == 0){
+						int didRecv = recv(cd, packet, 1, 0);
+						if (didRecv == -1){
+						printf("Received Failed!\n");
+						pthread_exit(NULL);
+						}
+					}
+					else {
+						printf("Got before \n");
+						int didRecv = recvAll(cd, get + 1, packet);
+						printf("Got After %d\n", didRecv);
+						printf("%c\n", packet[0]);
+						if (didRecv == -1){
+							perror("");
+							printf("Received Failed!\n");
+							pthread_exit(NULL);
+						}
+						if (didRecv != get + 1){
+							printf("Bad Coding!\n");
+							pthread_exit(NULL);
+						}
+					}
+					
+					//printByteArray(packet);
+					if(packet[0] == (uint8_t) 'D'){
+						DONE;
+						//free(fileContents);// check if client is finished sending
+						sendAll(cd, (uint8_t *) 'A', 1);
+						done = 1;
+						break;
+					}
+					else if (packet[0] == (uint8_t) 'F'){
+						//DONE;
+						//getMd5Digest(packet+1, info->fileLen, temp);
+						//convertMd5ToString(filePath, temp);
+						//strcat(folder, filePath); //concat file path with md5 digest
+						
+						/* for (int i = 1; i < MAXLEN; i++){
+							*ptr++ = packet[i]; // set 
+							printf("%c", packet[i]);
+						} */
+						
+						memcpy(ptr, packet + 1, get);
+						ptr += get;
+						
+					}
+					else {
+						printf("Received erroneous data!\n");
+						printf("%s\n", packet);
+					}
+					memset(packet, 0, sizeof(packet));
+				}
+			} else{
+				free(info);
+				break;
+			}
+			char folder[100] = "./serverfiles/";
+			strcat(folder, (*info).filename);
+			
+			FILE * fp = fopen(folder, "wb+");
+			fwrite(fileContents, 1, info->fileLen + 1, fp);
+			fclose(fp);
+			
+			if (done) {
+				close(cd);
+				break;
+			}
+		}
+		k = 1;
+		if (k != 1){ //check return value of write to file
+			close(cd);
+			printf("Write to File failed!\n");
+			pthread_exit(NULL);
+		}
+		//Function that actually transfers the file
+		//free(info);
+		printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
 	}
-	
-	
-	
-      } else{
-	free(info);
-	break;
-      }
-      char folder[100] = "serverfiles/";
-      strcat(folder, (*info).filename);
-      k = writeToFile(folder, fileContents);
-      if (done) {
-	
-	close(cd);
-	break;
-      }
-    }
-    if (k != 1){ //check return value of write to file
-      close(cd);
-      pthread_exit(NULL);
-    }
-    //Function that actually transfers the file
-    //free(info);
-    printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
-  }
-  //pthread_exit(NULL);
-  return NULL;
+	//pthread_exit(NULL);
+	return NULL;
 }
 void inputHandler(int s) {
   running = 0;

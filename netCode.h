@@ -28,8 +28,9 @@ AWESOME HEADER BLOCK
 
 #define T_TYPE 'T'
 #define F_TYPE 'F'
+#define D_TYPE 'D'
 
-void recvAll (int sock, int amount, uint8_t * dest);
+int recvAll (int sock, int amount, uint8_t * dest);
 
 //takes a socket and an addrinfo struct and attempts to connect to a remote host
 int connectTo (int sock, struct addrinfo * info);
@@ -41,7 +42,7 @@ int send_string(int sd, uint8_t * buf);
 //or something goes wrong. Takes a socket, the buffer, the length of buffer
 //and returns a boolean for success, and sets the len variable to the 
 //amount of bytes actually sent
-int sendAll(int sock, uint8_t * buffer, int  * len);
+int sendAll(int sock, uint8_t * buffer, int len);
 
 
 //Accepts a new connection on the given socket
