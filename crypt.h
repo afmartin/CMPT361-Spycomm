@@ -25,28 +25,11 @@ Description: Functions for dealing with OTPs and Offsets.
  * Args: 
  * uint8_t * data - data to alter
  * int data_pos - is there an offset in the data to encrypt
- * uint8_t - the one time pad
- * int otp_pos - position currently in one time pad (offset)
- * int len - for how many bytes do we "crypt"
+ * uint8_t * digest - the digest of OTP 
+ * unsigned long offset - position currently in one time pad (offset)
+ * unsigned long len - for how many bytes do we "crypt"
  */
-void crypt(uint8_t * data, int data_pos, uint8_t * otp, int otp_pos, int len);
-
-/**
- * getOtp
- * 
- * Loads a particular OTP specified by digest.  
- *
- * Do not provide digest as a string representation.. give the
- * binary digest of it.
- *
- * Args:
- * uint8_t * digest - Array of bytes to represent digest
- * unsigned long * offset - updates offset pointer to where offset is
- *
- * Returns:
- * uint8_t * to malloc'd (remember to free) of OTP.  Will be 10MB!
- */
-uint8_t * getOtp(uint8_t * digest, unsigned long * offset);
+void crypt(uint8_t * data, int data_pos, uint8_t * digest, unsigned long offset, unsigned long len);
 
 /**
  * setOffset

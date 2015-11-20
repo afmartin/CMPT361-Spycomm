@@ -191,31 +191,47 @@ void setOffset(uint8_t * digest, unsigned long offset) {
     writeMap();
 }
 
-void crypt(uint8_t * data, int data_pos, uint8_t * otp, int otp_pos, int len) {
-    for (int i=0; i<len; i++) {
-        data[i + data_pos] = data[i + data_pos] ^ otp[i + otp_pos];
-    }
-}
-
-uint8_t * getOtp(uint8_t * digest, unsigned long * offset) {
+/**
+ * getOtp
+ * 
+ * Loads a particular OTP specified by digest.  
+ *
+ * Do not provide digest as a string representation.. give the
+ * binary digest of it.
+ *
+ * Args:
+ * uint8_t * digest - Array of bytes to represent digest
+ * uint8_t * otp - pointer to memory for segment of OTP specified by offset, and has size len.
+ * unsigned long offset - offset in file to load from
+ * unsigned long len - the amount of data to retrieve starting from offset
+ */
+static void getOtp(uint8_t * digest, uint8_t * otp, unsigned long offset, unsigned long len) {
     char filename[FILENAME_LEN];
     findFilename(filename, digest);
     
-    FILE * f = fopen(filename, "r");
+    FILE * f = fopen(filename, "rb");
     if (f == NULL) {
         return NULL;  
     }
 
-    uint8_t * otp = malloc(DIGEST_SIZE);
+	if (fseek(f, offset, SEEK_SET) == -1) {
+		perror("fseek");		
+		exit(1);
+	}
 
-    if (getFileArray(f, DIGEST_SIZE, otp) == -1) {
-        free(otp);
-        return NULL;
+    if (fread(otp, sizeof(uint8_t), len, f) == 0) {
+		fprintf(stderr, "Failed to load OTP\n");
+		exit(1);
     }
 	fclose(f);
+}
 
-    *offset = getOffset(digest);
-    return otp;
+void crypt(uint8_t * data, int data_pos, uint8_t * digest, unsigned long offset, unsigned long len) {
+	uint8_t otp[len];
+	getOtp(digest, otp, offset, len);
+    for (int i=0; i<len; i++) {
+        data[i + data_pos] = data[i + data_pos] ^ otp[i];
+    }
 }
 
 void readMap() {
