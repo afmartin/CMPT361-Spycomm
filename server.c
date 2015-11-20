@@ -205,7 +205,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	
   uint8_t * fileContents; //+1 to allow for null term
   char folder[100] = "./serverfiles/";
-  char *t = NULL; //time string
+  char *t; //time string
   struct stat st = {0};
 
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
