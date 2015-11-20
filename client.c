@@ -9,7 +9,7 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
+#include <math.h>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -239,7 +239,7 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 			exit(1);
 		}
 		
-		int percent = ((i * 100) / (fileSize / (MAX_PACKET_LEN)));
+		int percent = (int)(ceil((float)((i + 1) * 100) / ceil((float)fileSize / (MAX_PACKET_LEN))));
 		//printf("%2d%%  %d =  %d ' '\n", i / (fileSize / (MAX_PACKET_LEN)), ((percent * barWidth) / 100), (((100 - percent) * barWidth) / 100));
 		
 		printf("%2d%% [", percent);
