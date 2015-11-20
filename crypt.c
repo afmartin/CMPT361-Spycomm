@@ -26,6 +26,13 @@ Description: Functions for dealing with OTPs and Offsets.
 // in a dynamically list of dynamically allocated DigestMap!
 #define FILENAME_LEN 41 
 
+/**
+ * DigestMap
+ *
+ * Data structure to function like a map
+ * where the digest string representation is the
+ * key, and the value is the offset.
+ */
 typedef struct _DigestMap {
     unsigned long offset;
     char digest[FILENAME_LEN];
@@ -34,6 +41,17 @@ typedef struct _DigestMap {
 static DigestMap ** map;
 static int map_count = 0;
 
+/**
+ * findPosition
+ *
+ * Finds the position in the digest map, that
+ * a the key is found.  
+ *
+ * Returns -1 if nothing found.
+ *
+ * Args:
+ * char * digest - the string representation of digest.
+ */
 static int findPosition(char * digest) {
     for (int i=0; i < map_count; i++) {
         if (strcmp(digest, map[i]->digest)) {
@@ -43,6 +61,17 @@ static int findPosition(char * digest) {
     return -1;
 }
 
+/**
+ * getOffset
+ *
+ * Given a binary digest, find the current offset.
+ *
+ * Args:
+ * uint8_t * digest - binary representation of digest 
+ *
+ * Returns:
+ * unsigned long of the offset is found.
+ */
 static unsigned long getOffset(uint8_t * digest) {
     char digestStr[MD5_STRING_LENGTH];
     convertMd5ToString(digestStr, digest);
@@ -54,6 +83,15 @@ static unsigned long getOffset(uint8_t * digest) {
     }
 } 
 
+/**
+ * findFilename
+ *
+ * Computes filename based off digest.
+ *
+ * Args:
+ * char * filename - pointer to memory of FILENAME_LEN bytes to write to
+ * uint8_t * digest - binary representation of digest.
+ */
 static void findFilename(char * filename, uint8_t * digest) {
     char digestStr[MD5_STRING_LENGTH];
     convertMd5ToString(digestStr, digest);
@@ -63,7 +101,12 @@ static void findFilename(char * filename, uint8_t * digest) {
     strncat(filename, EXTENSION, FILENAME_LEN);
 }
 
-
+/**
+ * writeMap
+ *
+ * Writes the current state of the digest-offset map
+ * to a file (will clobber it).
+ */
 static void writeMap() {
 	FILE * f = fopen(MAP_FILENAME, "w"); 
 	if (f == NULL) {
@@ -77,6 +120,15 @@ static void writeMap() {
 	fclose(f);
 }
 
+/**
+ * addToMap
+ *
+ * Adds a digest to a map (assumes that the digest
+ * is not in the map already.. or will get duplicates).
+ *
+ * Args:
+ * char * digest - string representation of the digest
+ */
 static void addToMap(char * digest) {
     // Any malloc error leads to program termination,
     // as if malloc fails something is seriously wrong.
@@ -110,6 +162,16 @@ static void addToMap(char * digest) {
     map_count++;
 }
 
+/**
+ * changeMapOffset
+ *
+ * Updates an element of the map (given an integer position)
+ * with the new offset.
+ *
+ * Args: 
+ * int position - position in array of maps
+ * unsigned long offset - current offset:q
+ */
 static void changeMapOffset(int position, unsigned long offset) {
     map[position]->offset = offset;
 }
