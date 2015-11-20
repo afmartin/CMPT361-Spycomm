@@ -196,6 +196,10 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
 	snprintf(fileLenAsString, MAX_FILE_LENGTH_AS_STRING, "%d", fileSize);
 	
+	if(fileSize == 0){
+		printf("File is empty!");
+	}
+	
 	//Sends the initialization data
 	initiateFileTransfer(sock, fileName, fileLenAsString, hash);
 	
