@@ -7,7 +7,7 @@
 #############################################################
 
 CC = gcc
-CFLAGS = -D_POSIX_C_SOURCE=200809L -Wall -pedantic -std=c99
+CFLAGS = -D_POSIX_C_SOURCE=200809L -g -Wall -pedantic -std=c99
 LDLIBS = -lpthread
 
 .PHONY: all clean

@@ -61,7 +61,8 @@ int writeToFile(char* filename, uint8_t *byteArray) {
   //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
-  fp = fopen(filename, "wb+"); //open file to write
+  printf("called\n");
+  fp = fopen(filename, "ab+"); //open file to write
   if (fp == NULL) {
     fprintf(stderr, "Error opening file '%s'\n", filename);
     return -1;
@@ -77,7 +78,7 @@ int writeToFile(char* filename, uint8_t *byteArray) {
   }
   
   fclose(fp);
-  //printf("Closed the file!\n");
+  printf("Closed the file!\n");
   return 1;
 }
 

@@ -1,11 +1,11 @@
 /*
-#################################################################################
-CMPT 361 - Assignment 3                                                         
-Group 4: Nick, John, Alex, Kevin
-November 6th, 2015
-Filename: server.c
-Description:
-#################################################################################
+  #################################################################################
+  CMPT 361 - Assignment 3                                                         
+  Group 4: Nick, John, Alex, Kevin
+  November 6th, 2015
+  Filename: server.c
+  Description:
+  #################################################################################
 */
 
 #include <stdio.h>
@@ -129,47 +129,47 @@ int initFileTransfer(int cd, fileInfo *info) {
     
     // copy filename into struct 
     while (*ptr != '\0') {
-		if (position == sizeof(info->filename) - 1){
-			break;
-		}
-		temp[position++] = *ptr++;
-	}
+      if (position == sizeof(info->filename) - 1){
+	break;
+      }
+      temp[position++] = *ptr++;
+    }
     temp[position] = '\0'; 
 	
-	//Copy the string into the struct
-	strcpy(info->filename, temp);
+    //Copy the string into the struct
+    strcpy(info->filename, temp);
 	
-	//Skip over the null terminator and reset the position
+    //Skip over the null terminator and reset the position
     ptr++;
     position = 0;
 	
     // copy fileLen into struct
     while (*ptr != '\0'){
-		if (position == MAX_FILE_LENGTH_AS_STRING){
-			fprintf(stderr, "File size requested too large!\n");
-			exit(1);
-		}
-		temp[position++] = *ptr++;
+      if (position == MAX_FILE_LENGTH_AS_STRING){
+	fprintf(stderr, "File size requested too large!\n");
+	exit(1);
+      }
+      temp[position++] = *ptr++;
     }
-	temp[position] = '\0';
+    temp[position] = '\0';
 	
-	//convert the string to an int
-	info->fileLen = atoi(temp);
+    //convert the string to an int
+    info->fileLen = atoi(temp);
 	
     ptr++;
     position = 0;
 	
     //copy the PadID into the struct
     while (*ptr != '\0'){
-		if (position == sizeof(info->padID) - 1){
-			break;
-		}
-		temp[position++] = *ptr++;
-	}
-	temp[position] = '\0';
+      if (position == sizeof(info->padID) - 1){
+	break;
+      }
+      temp[position++] = *ptr++;
+    }
+    temp[position] = '\0';
 
-	//Copy the string into the struct
-	strcpy(info->padID, temp);
+    //Copy the string into the struct
+    strcpy(info->padID, temp);
 	
     printf("%s -- %d -- %s\n", info->filename, info->fileLen, info->padID);
   }
@@ -180,143 +180,149 @@ int initFileTransfer(int cd, fileInfo *info) {
   /*if ((msg[1] = getPadOffset(info->padID)) != 0) {
     msg[0] = E_TYPE;
     } 
-  msg[1] = '\0';
+    msg[1] = '\0';
   
   
-  if (!send_string(cd, msg)) {
+    if (!send_string(cd, msg)) {
     fprintf(stderr, "Error sending response\n");
-  } */
+    } */
   return TRUE;
 }
 
 
 void* worker(void * arg) { //this is the function that threads will call
 	
-	int done = 0;
-	int k = 0;
-	//uint8_t* temp;
-	//char* filePath;
-	int * sd = (int*) arg;
-	uint8_t packet[MAXLEN + 1];
-	memset(packet, 0 , MAXLEN + 1);
-	//size_t len = MAXLEN;
-	uint8_t ack = 'A';
+  int done = 0;
+  int k = 0;
+  //uint8_t* temp;
+  //char* filePath;
+  int * sd = (int*) arg;
+  uint8_t packet[MAXLEN + 1];
+  memset(packet, 0 , MAXLEN + 1);
+  //size_t len = MAXLEN;
+  uint8_t ack = 'A';
 	
-	uint8_t * fileContents; //+1 to allow for null term
-
+  uint8_t * fileContents; //+1 to allow for null term
+  char folder[100] = "./serverfiles/";
 	
-	printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
-	while (TRUE){
-		int cd = acceptCon(*sd); //wait for a client to connect
+  printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
+  while (TRUE){
+    int cd = acceptCon(*sd); //wait for a client to connect
 		
 		
-		while (cd) { // full file transfer loop, allows for multiple filetrans
-			fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
-			if (info == NULL) {
-				fprintf(stderr, "Memory allocation failure\n");
-				exit(1);
-			}
+    while (cd) { // full file transfer loop, allows for multiple filetrans
+      fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
+      if (info == NULL) {
+	fprintf(stderr, "Memory allocation failure\n");
+	exit(1);
+      }
 			
 			
-			if (initFileTransfer(cd, info)){
-	
-				fileContents = malloc(sizeof(uint8_t) * info->fileLen);
-				uint8_t * ptr = fileContents; // set pointer to start of fileContents
-				while(!done){ // accepting a single file loop
+      if (initFileTransfer(cd, info)){
+	int left = info->fileLen;
+	strcat(folder, (*info).filename);
+	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
+	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
+	sendAll(cd, &ack, sizeof(ack));
+	while(!done){ // accepting a single file loop
 					
-					//Determines how many bytes we need to receive
-					//Either the Max packet length, or whatever is 
-					//remaining at the end of the file
-					int get;
-					int left = info->fileLen - (ptr - fileContents);
-					if (left < MAXLEN + 1){
-						get = left;
-					}
-					else {
-						get = MAXLEN;
-					}
+	  //Determines how many bytes we need to receive
+	  //Either the Max packet length, or whatever is 
+	  //remaining at the end of the file
+	  int get;
+	  //left = info->fileLen - (ptr - fileContents);
+	  printf("\n value of left is %d\n", left);
+	  if (left < MAXLEN + 1){
+	    get = left;
+	  }
+	  else {
+	    get = MAXLEN;
+	  }
 					
-					//Send an acknowledgement so the client knows when it should send data
-					sendAll(cd, &ack, sizeof(ack));
+	  //Send an acknowledgement so the client knows when it should send data
+	  //sendAll(cd, &ack, sizeof(ack));
 					
-					//If we are done receiving, get the 'D'
-					if (get == 0){
-						int didRecv = recv(cd, packet, 1, 0);
-						if (didRecv == -1){
-						printf("Received Failed!\n");
-						pthread_exit(NULL);
-						}
-					}
-					//Otherwise, recv as much as we need
-					else {
-						int didRecv = recvAll(cd, get + 1, packet);
-						if (didRecv == -1){
-							perror("");
-							printf("Received Failed!\n");
-							pthread_exit(NULL);
-						}
-						if (didRecv != get + 1){
-							printf("Bad Coding!\n");
-							pthread_exit(NULL);
-						}
-					}
+	  //If we are done receiving, get the 'D'
+	  if (get == 0){
+	    int didRecv = recv(cd, packet, 1, 0);
+	    if (didRecv == -1){
+	      printf("Received Failed!\n");
+	      pthread_exit(NULL);
+	    }
+	  }
+	  //Otherwise, recv as much as we need
+	  else {
+	    int didRecv = recvAll(cd, get + 1, packet);
+	    if (didRecv == -1){
+	      perror("");
+	      printf("Received Failed!\n");
+	      pthread_exit(NULL);
+	    }
+	    if (didRecv != get + 1){
+	      printf("Bad Coding!\n");
+	      pthread_exit(NULL);
+	    }
+	  }
 					
-					//printByteArray(packet);
-					
-					//if we receive the 'D'
-					if(packet[0] == (uint8_t) 'D'){
-						//DONE;
-						sendAll(cd, &ack, sizeof(ack));
-						done = 1;
-						break;
-					}
-					//if we receive another packet
-					else if (packet[0] == (uint8_t) 'F'){
-						//DONE;
-						//getMd5Digest(packet+1, info->fileLen, temp);
-						//convertMd5ToString(filePath, temp);
-						//strcat(folder, filePath); //concat file path with md5 digest
+	  //printByteArray(packet);
+	  
+	  //if we receive the 'D'
+	  if(packet[0] == (uint8_t) 'D'){
+	    DONE;
+	    sendAll(cd, &ack, sizeof(ack));
+	    done = 1;
+	    break;
+	  }
+	  //if we receive another packet
+	  else if (packet[0] == (uint8_t) 'F'){
+	    printf("%s\n\n", packet + 1);
+	    //DONE;
+	    //getMd5Digest(packet+1, info->fileLen, temp);
+	    //convertMd5ToString(filePath, temp);
+	    //strcat(folder, filePath); //concat file path with md5 digest
 						
-						//copy the data from the packet into the fileContents
-						//And then increment the pointer
-						memcpy(ptr, packet + 1, get);
-						ptr += get;
-					}
-					else {
-						printf("Received erroneous data!\n");
-						printf("%s\n", packet);
-					}
-					memset(packet, 0, sizeof(packet));
-				}
-			} else{
-				free(info);
-				break;
-			}
-			//Add a folder prefix
-			char folder[100] = "./serverfiles/";
-			strcat(folder, (*info).filename);
-			
-			//Open a file and write the fileContents to it
-			FILE * fp = fopen(folder, "wb+");
-			k = fwrite(fileContents, 1, info->fileLen + 1, fp);
-			fclose(fp);
-			
-			if (done) {
-				close(cd);
-				break;
-			}
-			free(info);
-			free(fileContents);
-		}
-		if (k == -1){ //check return value of write to file
-			close(cd);
-			printf("Write to File failed!\n");
-			pthread_exit(NULL);
-		}
-		printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
+	    //copy the data from the packet into the fileContents
+	    //And then increment the pointer
+	    writeToFile(folder, packet + 1);
+	    //memcpy(ptr, packet + 1, get);
+	    left = left - strlen((char*)packet+1);
+	    //ptr += get;
+	  }
+	  else {
+	    printf("Received erroneous data!\n");
+	    printf("%s\n", packet);
+	  }
+	  memset(packet, 0, sizeof(packet));
 	}
-	//pthread_exit(NULL);
-	return NULL;
+      } else{
+	free(info);
+	break;
+      }
+      //Add a folder prefix
+      //char folder[100] = "./serverfiles/";
+      //strcat(folder, (*info).filename);
+			
+      //Open a file and write the fileContents to it
+      //FILE * fp = fopen(folder, "wb+");
+      //k = fwrite(fileContents, 1, info->fileLen + 1, fp);
+      //      fclose(fp);
+			
+      if (done) {
+	close(cd);
+	break;
+      }
+      free(info);
+      //free(fileContents);
+    }
+    if (k == -1){ //check return value of write to file
+      close(cd);
+      printf("Write to File failed!\n");
+      pthread_exit(NULL);
+    }
+    printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
+  }
+  //pthread_exit(NULL);
+  return NULL;
 }
 void inputHandler(int s) {
   running = 0;
