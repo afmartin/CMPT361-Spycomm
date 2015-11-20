@@ -22,7 +22,7 @@ uint8_t ** getFileArray(FILE* file, int fileSize);
    of the file into the array. Returns 0 on success and -1
    on failure. */
 
-int writeToFile(char* filename, uint8_t *byteArray);
+int writeToFile(char* filename, uint8_t *byteArray, int packetLen);
 /* Takes string of the filename to be created, a pointer to a
    uint8_t array containing bytes to be written, and an integer
    representing the amount of bytes to be written. Will write

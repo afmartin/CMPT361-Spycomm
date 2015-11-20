@@ -52,12 +52,12 @@ uint8_t ** getFileArray(FILE* file, int fileSize) {
   return byteArray;
 }
 
-int writeToFile(char* filename, uint8_t *byteArray) {
+int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   int k;
   uint8_t uint8Chr;
   FILE *fp;
 
-  k = MAX_PACKET_LEN; //calculate how many indexes in array
+  //  k = MAX_PACKET_LEN; //calculate how many indexes in array
   //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
@@ -68,10 +68,10 @@ int writeToFile(char* filename, uint8_t *byteArray) {
     return -1;
   }
   //DONES;
-  for (int i = 1; i < k; i++) { //iterate through array
+  for (int i = 0; i < packetLen; i++) { //iterate through array
     //for (int ii = 0; ii < MAX_PACKET_LEN; ii++){
     uint8Chr = byteArray[i];
-    if (uint8Chr == EOF) 
+    if (uint8Chr == 0) 
       break;
     unsigned char c = (unsigned char) uint8Chr; 
     fwrite(&c, 1, sizeof(c), fp); //write character to file

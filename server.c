@@ -283,9 +283,9 @@ void* worker(void * arg) { //this is the function that threads will call
 						
 	    //copy the data from the packet into the fileContents
 	    //And then increment the pointer
-	    writeToFile(folder, packet + 1);
+	    writeToFile(folder, packet + 1, get);
 	    //memcpy(ptr, packet + 1, get);
-	    left = left - strlen((char*)packet+1);
+	    left = left - get;//strlen((char*)packet+1);
 	    //ptr += get;
 	  }
 	  else {
