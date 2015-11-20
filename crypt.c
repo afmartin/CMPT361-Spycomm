@@ -11,6 +11,7 @@ Description: Functions for dealing with OTPs and Offsets.
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "file.h"
 #include "crypt.h"
@@ -20,7 +21,7 @@ Description: Functions for dealing with OTPs and Offsets.
 #define MD5_STRING_LEN_NO_TERM 32
 #define DIRECTORY_OF_OTP "otp/"
 #define MAP_FILENAME "offset.txt"
-#define MD5_LENGTH_STRING "33"
+#define MD5_LENGTH_STRING "32"
 
 // Not implemented as function, so we do not have dynamically allocate the strings
 // in a dynamically list of dynamically allocated DigestMap!
@@ -176,21 +177,6 @@ static void changeMapOffset(int position, unsigned long offset) {
     map[position]->offset = offset;
 }
 
-void setOffset(uint8_t * digest, unsigned long offset) {
-    char digestStr[MD5_STRING_LENGTH];
-    convertMd5ToString(digestStr, digest);
-
-    int position = findPosition(digestStr);
-    if (position == -1) {
-        // doesn't exist in map... add it.
-        addToMap(digestStr);
-		changeMapOffset(findPosition(digestStr), offset);
-    } else {
-        changeMapOffset(position, offset);
-    }
-    writeMap();
-}
-
 /**
  * getOtp
  * 
@@ -234,6 +220,27 @@ void crypt(uint8_t * data, int data_pos, uint8_t * digest, unsigned long offset,
     }
 }
 
+void setOffset(uint8_t * digest, unsigned long offset) {
+	// Ref for Mutex from Dr. Nicholas M. Boer's CMPT 360 Lock Lecture Slides
+	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_lock (&lock);
+    char digestStr[MD5_STRING_LENGTH];
+    convertMd5ToString(digestStr, digest);
+
+    int position = findPosition(digestStr);
+    if (position == -1) {
+        // doesn't exist in map... add it.
+        addToMap(digestStr);
+		changeMapOffset(findPosition(digestStr), offset);
+    } else {
+        changeMapOffset(position, offset);
+    }
+    writeMap();
+	pthread_mutex_unlock (&lock);
+}
+
+
+
 void readMap() {
 	FILE * f = fopen(MAP_FILENAME, "r");
 	if (f == NULL) {
@@ -243,7 +250,7 @@ void readMap() {
 
 	char digest[MD5_STRING_LENGTH];
 	unsigned long offset;
-	while (fscanf(f, "%" MD5_LENGTH_STRING "s:%lu", digest, offset) == 2) {
+	while (fscanf(f, "%" MD5_LENGTH_STRING "s:%lu\n", digest, offset) == 2) {
 		setOffset(digest, offset);
 	}
 	fclose(f);
