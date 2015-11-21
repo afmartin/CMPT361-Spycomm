@@ -3,5 +3,5 @@ spycomm
 spycommd
 zip
 otp\*
-digest\*
+digest\*.o
 
