@@ -8,7 +8,7 @@
 
 CC = gcc
 CFLAGS = -D_POSIX_C_SOURCE=200809L -g -Wall -pedantic -std=c99
-LDLIBS = -lpthread
+LDLIBS = -lpthread -lncurses
 
 .PHONY: all clean
 
@@ -26,8 +26,11 @@ compress.o: compress.c compress.h
 user.o: user.c user.h
 file.o: file.c file.h
 netCode.o: netCode.c netCode.h
+screen.o: screen.c screen.h
 
 clean:
 	$(RM) spycommd spycomm *.o
 
 
+screen: screen.c screen.h
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
