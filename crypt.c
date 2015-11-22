@@ -36,7 +36,7 @@ Description: Functions for dealing with OTPs and Offsets.
  */
 typedef struct _DigestMap {
     long long int offset;
-    char digest[FILENAME_LEN];
+    char digest[MD5_STRING_LENGTH];
 } DigestMap;
 
 static DigestMap ** map;
@@ -54,8 +54,11 @@ static int map_count = 0;
  * char * digest - the string representation of digest.
  */
 static int findPosition(char * digest) {
+    if (map == NULL || map_count == 0) {
+        return -1;
+    }
     for (int i=0; i < map_count; i++) {
-        if (strcmp(digest, map[i]->digest)) {
+        if (strcmp(digest, map[i]->digest) == 0) {
             return i;
         }
     }
@@ -190,16 +193,17 @@ static void changeMapOffset(int position, unsigned long offset) {
  * binary digest of it.
  *
  * Args:
- * uint8_t * digest - Array of bytes to represent digest
+ * char * digest - string representation of digest
  * uint8_t * otp - pointer to memory for segment of OTP specified by offset, and has size len.
  * long long int offset - offset in file to load from
  * long long int len - the amount of data to retrieve starting from offset
  */
-static void getOtp(uint8_t * digest, uint8_t * otp, long long int offset, long long int len) {
+static void getOtp(char * digest, uint8_t * otp, long long int offset, long long int len) {
     char filename[FILENAME_LEN];
-    findFilename(filename, NULL, digest);
+    findFilename(filename, digest, NULL);
     
     FILE * f = fopen(filename, "rb");
+    fprintf(stdout, "%s\n", filename);
     if (f == NULL) {
         fprintf(stderr, "ERROR: Could not locate otp to use\n");
         exit(1);
@@ -238,7 +242,9 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
     }
 
     char filename[FILENAME_LEN];
-    findFilename(filename, NULL, digest);
+    memset(filename, 0, FILENAME_LEN);
+    findFilename(filename, digest, NULL);
+    fprintf(stdout, "%s\n", filename);
     
     FILE * f = fopen(filename, "rb");
     if (f == NULL) {
@@ -246,16 +252,21 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
     } else {
         int fd = fileno(f);
         *size = getFileSize(fd);
+        fclose(f);
     }
-    fclose(f);
 }
 
-void serverCrypt(uint8_t * data, int data_pos, uint8_t * digest, long long int  offset, long long int len) {
-	uint8_t otp[len];
+void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  offset, long long int len) {
+	uint8_t * otp = malloc(len);
+    if (otp == NULL) {
+        fprintf(stderr, "ERROR: Could not allocate room for OTP.\n");
+        exit(1);
+    }
 	getOtp(digest, otp, offset, len);
     for (int i=0; i<len; i++) {
         data[i + data_pos] = data[i + data_pos] ^ otp[i];
     }
+    free(otp);
 }
 
 void setOffset(char * digest, long long int offset) {

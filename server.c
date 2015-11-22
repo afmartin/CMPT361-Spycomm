@@ -3,16 +3,14 @@
   CMPT 361 - Assignment 3                                                         
   Group 4: Nick, John, Alex, Kevin
   November 6th, 2015
-  Filename: server.c
-  Description:
+  Filename: server.c Description:
   #################################################################################
 */
 
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <getopt.h>
-#include <string.h>
+#include <getopt.h> #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -46,6 +44,13 @@ typedef struct _fileInfo {
   long long int fileLen;
   char padID[MD5_STRING_LENGTH];
 } fileInfo;
+
+void printUsage(char* name) {
+    fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
+    fprintf(stdout, "       h: displays file usage information\n");
+    fprintf(stdout, "       p: takes an argument <port number> that will specify"
+                "the port number to be used. Default port number is 36115\n");
+}
 
 int getSocket(char* port) {
   struct addrinfo *res, *i;
@@ -190,8 +195,10 @@ void* worker(void * arg) { //this is the function that threads will call
   uint8_t ack = 'A';
 	
   uint8_t * fileContents; //+1 to allow for null term
+
+  //TODO: No magic numbers
   char folder[100] = "./serverfiles/";
-  char *t; //time string
+  char t[100]; //time string
   struct stat st = {0};
 
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
@@ -210,7 +217,10 @@ void* worker(void * arg) { //this is the function that threads will call
       if (initFileTransfer(cd, info)){
 	long long int left = info->fileLen;
 	getCurrentTime(t);
+
+    // TODO: Use strncat
 	strcat(folder, t);
+    // TODO: Create serverfiles if DNE.
 	if (stat(folder, &st) == -1)
 	  mkdir(folder, 0700);
 	strcat(folder, "/");
@@ -228,6 +238,7 @@ void* worker(void * arg) { //this is the function that threads will call
     if (padSize == 0) {
         sendAll(cd, "E2", 2);
         return NULL;
+        // Not enough room in pad
     } else if (info->fileLen > (padSize - padOffset)) {
         sendAll(cd, "E1", 2);
         return NULL;
@@ -236,7 +247,7 @@ void* worker(void * arg) { //this is the function that threads will call
     char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
     snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
 
-    setOffset(info->padID, padOffset);
+    setOffset(info->padID, padOffset + info->fileLen);
 
 
 	sendAll(cd, buffer, MAX_FILE_LENGTH_AS_STRING + 1);
@@ -291,7 +302,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  }
 	  //if we receive another packet
 	  else if (packet[0] == (uint8_t) 'F'){
-	    printf("%s\n\n", packet + 1);
+	    printf("Encrypted: %s\n\n", packet + 1);
 	    //DONE;
 	    //getMd5Digest(packet+1, info->fileLen, temp);
 	    //convertMd5ToString(filePath, temp);
@@ -299,6 +310,8 @@ void* worker(void * arg) { //this is the function that threads will call
 
 	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
         padOffset += get;
+
+	    printf("Decrypted: %s\n\n", packet + 1);
 	    //copy the data from the packet into the fileContents
 	    //And then increment the pointer
 	    writeToFile(folder, packet + 1, get);

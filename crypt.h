@@ -34,11 +34,11 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
  * Args: 
  * uint8_t * data - data to alter
  * int data_pos - is there an offset in the data to encrypt
- * uint8_t * digest - the digest of OTP 
+ * char * digest - the digest of OTP 
  * long long int offset - position currently in one time pad (offset)
  * long long int len - for how many bytes do we "crypt"
  */
-void serverCrypt(uint8_t * data, int data_pos, uint8_t * digest, long long int  offset, long long int len);
+void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  offset, long long int len);
 
 /**
  * clinetCrypt

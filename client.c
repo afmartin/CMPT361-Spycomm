@@ -250,7 +250,6 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 		}
 
         clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
-        offset += MAX_PACKET_LEN;
 
 		int sent = sendAll(sock, buffer, read + 1);
 		if (sent == -1){
@@ -258,6 +257,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 			exit(1);
 		}
 		
+        offset += sent - 1;
 		int percent = (int)(ceil((float)((i + 1) * 100) / ceil((float)fileSize / (MAX_PACKET_LEN))));
 		//printf("%2d%%  %d =  %d ' '\n", i / (fileSize / (MAX_PACKET_LEN)), ((percent * barWidth) / 100), (((100 - percent) * barWidth) / 100));
 		
@@ -280,8 +280,8 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 	
 	
 	//Wait for an acknowledgement before closing the connection
-	checkRet = recv(sock, &wait, sizeof(uint8_t), 0);
-	if (checkRet == -1 || wait != (uint8_t) 'A'){
+	checkRet = recv(sock, wait, sizeof(uint8_t), 0);
+	if (checkRet == -1 || wait[0] != (uint8_t) 'A'){
 		perror("Error Receiving Ack");
 		exit(1);
 	}
@@ -305,7 +305,7 @@ int main (int argc, char * argv[]){
 
 		printf("\nSending: %s\n", fileToSend);
 		
-		sendFile(opts->address, opts->ports, fileToSend, digestStr);
+		sendFile(opts->address, opts->ports, fileToSend, opts->padPath);
 	
 		pos += strlen(fileToSend) + 1;
 	}
