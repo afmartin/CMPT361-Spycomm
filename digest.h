@@ -17,16 +17,27 @@ Description: Functions for computing MD5 digests
 #define MD5_STRING_LENGTH 33
 
 /**
+ * getMd5DigestFromFile
+ *
+ * Computes MD5 digest from a given file. 
+ *
+ *  char * filename - Filename of file.  Does not check if it exists. 
+ *  uint8_t * digest - MUST HAVE LENGTH MD5_DIGEST_BYTES
+ *					 - where the digest is written to
+ */
+void getMd5DigestFromFile(char * filename, uint8_t * digest);
+
+/**
  * getMd5Digest
  *
  * Computes MD5 digest from given bytes and length.
  *
  *  uint8_t * data - Array of bytes to use for MD5 digest
  *  size_t len - length of data
- *  uint8_t * digest - MUST HAVE LENGTH MD55555_DIGEST_BYTES
+ *  uint8_t * digest - MUST HAVE LENGTH MD5_DIGEST_BYTES
  *					 - where the digest is written to
  */
-void getMd5Digest(uint8_t * data, size_t len, uint8_t *digest);
+void getMd5Digest(uint8_t * data, size_t len, uint8_t * digest);
 
 /**
  * compareMd5Digest

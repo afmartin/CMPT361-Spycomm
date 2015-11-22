@@ -19,8 +19,8 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 
 #include "file.h"
 #include "netCode.h"
-
-#define MAX_FILE_LENGTH_AS_STRING 10
+#include "digest.h"
+#include "crypt.h"
 
 #define OPTSTRING "hc:p:o:"
 
@@ -29,6 +29,10 @@ VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
 #define DONE   printf("Done!\n");
 
 //This is a struct to hold the command line strings
+
+// TODO: Be advised that althougth the max file length may be
+// 512 bytes, the user could reference files from subfolders and therefor
+// the length should dynamically be determined.
 struct commandLine {
   char address[IPV6_ADDRLEN];
   char ports[MAX_PORTS_LEN];
@@ -67,6 +71,13 @@ struct commandLine * getOptions (int argc, char * argv[]){
 			case 'o':
 				strncpy(options->padPath, optarg, MAX_PATH_LEN);
 				count -= 2;
+                // Checks to see if file exists.
+                FILE *f;
+                if ((f = fopen(options->padPath, "rb")) == NULL) {
+                    fprintf(stderr, "ERROR: Not valid path to one time pad.\n");
+                    exit(1);
+                }
+                fclose(f);
 				break;
 			default:
 				printf(USAGE);
@@ -85,6 +96,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	int argvPos = optind;
 	int filePathPos = 0;
   
+    // TODO: Check if files actually exist.  Otherwise ignore them.
 	while (count != 0){
 		if (filePathPos + strlen(argv[argvPos]) + 1 > MAX_FILES_LEN){
 			printf("Too Many files chosen!\n");
@@ -177,7 +189,7 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	}
 }
 
-void sendFile (char * address, char * port, char * fileName, char * hash){
+void sendFile (char * address, char * port, char * fileName, char * padPath){
 
 	struct addrinfo * serverInfo = buildAddrInfo(address, port);
 
@@ -192,37 +204,41 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 	//Get info about the file to send
 	FILE * fp = fopen(fileName, "r");
 	int fd = fileno(fp);
-	int fileSize = getFileSize(fd);
+	long long int fileSize = getFileSize(fd);
 	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
-	snprintf(fileLenAsString, MAX_FILE_LENGTH_AS_STRING, "%d", fileSize);
+	snprintf(fileLenAsString, MAX_FILE_LENGTH_AS_STRING, "%lli", fileSize);
 	
 	if(fileSize == 0){
 		printf("File is empty!");
 	}
 	
+    // Compute string representatino of digest.
+    uint8_t digest[MD5_DIGEST_BYTES];	
+    getMd5DigestFromFile(padPath, digest);
+    char digestStr[MD5_STRING_LENGTH];
+    convertMd5ToString(digestStr, digest);
+
 	//Sends the initialization data
-	initiateFileTransfer(sock, fileName, fileLenAsString, hash);
-	
+	initiateFileTransfer(sock, fileName, fileLenAsString, digestStr);
 	
 	//Waits for an acknowledgement before sending data
 	//to ensure the server is ready to receive
-	uint8_t wait;
+	uint8_t wait[1 + MAX_FILE_LENGTH_AS_STRING];
 	int checkRet;
-	checkRet = recv(sock, &wait, 1, 0);
-	if (checkRet == -1 || wait != (uint8_t) 'A'){
+	checkRet = recv(sock, wait, 1 + MAX_FILE_LENGTH_AS_STRING, 0);
+	if (checkRet == -1 || wait[0] != (uint8_t) 'T'){
 		perror("Error Receiving Ack");
-		printf("%c\n", wait);
+		printf("%c\n", wait[0]);
 		exit(1);
 	}
 
+    long long int offset = atoll(wait + 1);
 	
 	//Create the buffer for the Packet to be sent
 	uint8_t buffer[MAX_PACKET_LEN + 1];
 	memset(buffer, 0, MAX_PACKET_LEN + 1);
 	
 	int barWidth = 60;
-	
-	sleep(1);
 	
 	//Send out as many packets as there is data
 	for (int i = 0; i <= fileSize / (MAX_PACKET_LEN); i++){
@@ -232,7 +248,10 @@ void sendFile (char * address, char * port, char * fileName, char * hash){
 			fprintf(stderr, "An Error occured reading %s\n", fileName);
 			exit(0);
 		}
-		
+
+        clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
+        offset += MAX_PACKET_LEN;
+
 		int sent = sendAll(sock, buffer, read + 1);
 		if (sent == -1){
 			printf("Failure to send!\n");
@@ -281,10 +300,12 @@ int main (int argc, char * argv[]){
 	for(int i = 0; i < opts->fileNum; i++){
 		char fileToSend[MAX_PATH_LEN];
 		strncpy(fileToSend, &(opts->filePath[pos]), MAX_PATH_LEN);
-		
+
+
+
 		printf("\nSending: %s\n", fileToSend);
 		
-		sendFile(opts->address, opts->ports, fileToSend, "PLEASEWORK!!!!!!");
+		sendFile(opts->address, opts->ports, fileToSend, digestStr);
 	
 		pos += strlen(fileToSend) + 1;
 	}

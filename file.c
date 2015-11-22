@@ -21,7 +21,7 @@ Description:
 //#define DONES printf("done");
 
 
-size_t getFileSize(int fd) {
+long long int getFileSize(int fd) {
   struct stat buf; //init stat structure from sys/stat.h
   size_t size;
   
@@ -31,7 +31,7 @@ size_t getFileSize(int fd) {
   return size;
 }
 
-uint8_t ** getFileArray(FILE* file, int fileSize) {
+uint8_t ** getFileArray(FILE* file, unsigned long fileSize) {
   
   int amountOfPackets = fileSize / MAX_PACKET_LEN ;
   uint8_t ** byteArray;

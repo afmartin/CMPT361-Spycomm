@@ -13,6 +13,16 @@ Description: Functions for computing MD5 digests
 #include <stdio.h>
 #include <stdint.h>
 #include "digest.h"
+#include "file.h"
+
+void getMd5DigestFromFile(char * filename, uint8_t * digest) {
+    FILE *f = fopen(filename, "rb");
+    int fd = fileno(f);
+    long long int filesize = getFileSize(fd);
+    uint8_t data[filesize];
+    fread(data, sizeof(uint8_t), filesize/sizeof(uint8_t), f);
+    getMd5Digest(data, filesize, digest);
+}
 
 bool compareMd5Digest(uint8_t * a, uint8_t * b) {
 	for (int i=0; i<MD5_DIGEST_BYTES; i++) {

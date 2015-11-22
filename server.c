@@ -24,7 +24,8 @@
 #include "server.h"
 #include "file.h"
 #include "netCode.h"
-//#include "digest.h"
+#include "crypt.h"
+#include "digest.h"
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
@@ -42,16 +43,9 @@ volatile int running = 1;
 
 typedef struct _fileInfo {
   char filename[MAX_FILE_NAME];
-  int fileLen;
-  char padID[MAX_MD5LEN + 1];
+  long long int fileLen;
+  char padID[MD5_STRING_LENGTH];
 } fileInfo;
-
-void printUsage(char* name) {
-  fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
-  fprintf(stdout, "       h: displays file usage information\n");
-  fprintf(stdout, "       p: takes an argument <port number> that will specify"
-	  "the port number to be used. Default port number is 36115\n");
-}
 
 int getSocket(char* port) {
   struct addrinfo *res, *i;
@@ -103,14 +97,6 @@ int getSocket(char* port) {
   return sd;
 }
 
-int getPadOffset(int padID) {
-
-  return 0;
-  /*takes padID as input, returns 0 if successful,
-    otherwise returns the numbers we have for error
-    codes in the protocol */
-}
-
 int initFileTransfer(int cd, fileInfo *info) {
   
   //takes client descriptor and struct clientInfo as parameters
@@ -155,7 +141,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     temp[position] = '\0';
 	
     //convert the string to an int
-    info->fileLen = atoi(temp);
+    info->fileLen = atoll(temp);
 	
     ptr++;
     position = 0;
@@ -172,7 +158,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     //Copy the string into the struct
     strcpy(info->padID, temp);
 	
-    printf("%s -- %d -- %s\n", info->filename, info->fileLen, info->padID);
+    printf("%s -- %lli -- %s\n", info->filename, info->fileLen, info->padID);
   }
   else return FALSE;
   
@@ -222,7 +208,7 @@ void* worker(void * arg) { //this is the function that threads will call
 			
 			
       if (initFileTransfer(cd, info)){
-	int left = info->fileLen;
+	long long int left = info->fileLen;
 	getCurrentTime(t);
 	strcat(folder, t);
 	if (stat(folder, &st) == -1)
@@ -232,7 +218,28 @@ void* worker(void * arg) { //this is the function that threads will call
 	printf("folder is %s\n", folder);
 	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
 	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
-	sendAll(cd, &ack, sizeof(ack));
+    
+    // Check if we have the pad, if we have enough room
+    long long int padSize = 0;
+    long long int padOffset = 0;
+
+    getOffsetAndSize(info->padID, &padOffset, &padSize);
+
+    if (padSize == 0) {
+        sendAll(cd, "E2", 2);
+        return NULL;
+    } else if (info->fileLen > (padSize - padOffset)) {
+        sendAll(cd, "E1", 2);
+        return NULL;
+    }
+
+    char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
+    snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
+
+    setOffset(info->padID, padOffset);
+
+
+	sendAll(cd, buffer, MAX_FILE_LENGTH_AS_STRING + 1);
 	while(!done){ // accepting a single file loop
 					
 	  //Determines how many bytes we need to receive
@@ -240,7 +247,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  //remaining at the end of the file
 	  int get;
 	  //left = info->fileLen - (ptr - fileContents);
-	  printf("\n value of left is %d\n", left);
+	  printf("\n value of left is %lli\n", left);
 	  if (left < MAXLEN + 1){
 	    get = left;
 	  }
@@ -289,7 +296,9 @@ void* worker(void * arg) { //this is the function that threads will call
 	    //getMd5Digest(packet+1, info->fileLen, temp);
 	    //convertMd5ToString(filePath, temp);
 	    //strcat(folder, filePath); //concat file path with md5 digest
-						
+
+	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
+        padOffset += get;
 	    //copy the data from the packet into the fileContents
 	    //And then increment the pointer
 	    writeToFile(folder, packet + 1, get);
