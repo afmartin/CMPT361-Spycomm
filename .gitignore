@@ -2,4 +2,6 @@
 spycomm
 spycommd
 zip
-OTP\*
+otp\*
+digest\*.o
+

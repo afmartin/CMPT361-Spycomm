@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -204,11 +205,13 @@ void* worker(void * arg) { //this is the function that threads will call
 	
   uint8_t * fileContents; //+1 to allow for null term
   char folder[100] = "./serverfiles/";
-	
+  char *t; //time string
+  struct stat st = {0};
+
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
   while (TRUE){
     int cd = acceptCon(*sd); //wait for a client to connect
-		
+    
 		
     while (cd) { // full file transfer loop, allows for multiple filetrans
       fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
@@ -220,7 +223,13 @@ void* worker(void * arg) { //this is the function that threads will call
 			
       if (initFileTransfer(cd, info)){
 	int left = info->fileLen;
+	getCurrentTime(t);
+	strcat(folder, t);
+	if (stat(folder, &st) == -1)
+	  mkdir(folder, 0700);
+	strcat(folder, "/");
 	strcat(folder, (*info).filename);
+	printf("folder is %s\n", folder);
 	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
 	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
 	sendAll(cd, &ack, sizeof(ack));

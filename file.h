@@ -32,6 +32,6 @@ void printByteArray(uint8_t * byteArray);
 /* Takes uint8_t array containing bytes to be printed, and the
    total size of the array. */
 
-char* getCurrentTime();
+void getCurrentTime(char* timeString);
 /*returns a string containing the current time */
 #endif /* end _FILE_H if */

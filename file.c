@@ -89,20 +89,17 @@ void printByteArray(uint8_t * byteArray) {
     fprintf(stdout, "%c ", byteArray[i]);
 }
 
-char* getCurrentTime() {
+void getCurrentTime(char* timeString) {
   /* referenced from stackoverflow.com/questions/5141960/get-the-current-time-in-c */
 
   time_t currTime;
   struct tm* timeInfo;
-  char* timeString;
 
   time (&currTime);
   timeInfo= localtime(&currTime);
-
-  timeString = asctime(timeInfo);
+  strftime(timeString, 100, "%F:%T", timeInfo);
+  //timeString = asctime(timeInfo);
   printf("Current local time and date: %s\n", timeString);
-
-  return timeString;
 
 }
 	       
