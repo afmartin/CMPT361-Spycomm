@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 #include "server.h"
 #include "file.h"
 #include "netCode.h"
@@ -245,12 +246,13 @@ void* worker(void * arg) { //this is the function that threads will call
     }
 
     char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
+	memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
     snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
 
     setOffset(info->padID, padOffset + info->fileLen);
 
 
-	sendAll(cd, buffer, MAX_FILE_LENGTH_AS_STRING + 1);
+	sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
 	while(!done){ // accepting a single file loop
 					
 	  //Determines how many bytes we need to receive

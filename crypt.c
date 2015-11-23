@@ -66,27 +66,6 @@ static int findPosition(char * digest) {
 }
 
 /**
- * getOffsetAndSize
- *
- * Given a binary digest, find the current offset.
- *
- * Args:
- * uint8_t * digest - binary representation of digest 
- *
- * Returns:
- * long long int of the offset is found.
- */
-static long long int getOffset(uint8_t * digest) {
-    char digestStr[MD5_STRING_LENGTH];
-    convertMd5ToString(digestStr, digest);
-    int position = findPosition(digestStr);
-    if (position == -1) {
-        return 0;
-    } 
-    return map[position]->offset;
-} 
-
-/**
  * findFilename
  *
  * Computes filename based off digest.
@@ -98,6 +77,7 @@ static long long int getOffset(uint8_t * digest) {
  */
 static void findFilename(char * filename, char * digestStr, uint8_t * digestRaw) {
     // Only necessary if given raw digest
+	memset(filename, 0, FILENAME_LEN);
     char digest[MD5_STRING_LENGTH];
     if (digestStr == NULL || digestRaw != NULL) {
         convertMd5ToString(digest, digestRaw);
@@ -213,9 +193,7 @@ static void getOtp(char * digest, uint8_t * otp, long long int offset, long long
 		perror("fseek");		
 		exit(1);
 	}
-
-    if (fread(otp, sizeof(uint8_t), len, f) == 0) {
-		fprintf(stderr, "Failed to load OTP\n");
+if (fread(otp, sizeof(uint8_t), len, f) == 0) { fprintf(stderr, "Failed to load OTP\n");
 		exit(1);
     }
 	fclose(f);
@@ -224,6 +202,10 @@ static void getOtp(char * digest, uint8_t * otp, long long int offset, long long
 void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int offset, long long int len) {
     uint8_t otp[len];
     FILE * f = fopen(filename, "rb");
+	if (fseek(f, offset, SEEK_SET) == -1) {
+		perror("fseek");		
+		exit(1);
+	}
     if (fread(otp, sizeof(uint8_t), len, f) == 0) {
         fprintf(stderr, "ERROR: Could not load otp\n");
         exit(1);

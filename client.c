@@ -250,6 +250,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 		}
 
         clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
+		offset += read;
 
 		int sent = sendAll(sock, buffer, read + 1);
 		if (sent == -1){
@@ -257,7 +258,6 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 			exit(1);
 		}
 		
-        offset += sent - 1;
 		int percent = (int)(ceil((float)((i + 1) * 100) / ceil((float)fileSize / (MAX_PACKET_LEN))));
 		//printf("%2d%%  %d =  %d ' '\n", i / (fileSize / (MAX_PACKET_LEN)), ((percent * barWidth) / 100), (((100 - percent) * barWidth) / 100));
 		
