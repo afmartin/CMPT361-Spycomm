@@ -10,7 +10,8 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <getopt.h> #include <string.h>
+#include <getopt.h> 
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -249,7 +250,6 @@ void* worker(void * arg) { //this is the function that threads will call
 	memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
     snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
 
-    setOffset(info->padID, padOffset + info->fileLen);
 
 
 	sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
@@ -312,6 +312,7 @@ void* worker(void * arg) { //this is the function that threads will call
 
 	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
         padOffset += get;
+		setOffset(info->padID, padOffset);
 
 	    printf("Decrypted: %s\n\n", packet + 1);
 	    //copy the data from the packet into the fileContents

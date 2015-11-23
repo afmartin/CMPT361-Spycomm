@@ -12,6 +12,8 @@ Description: Functions for dealing with OTPs and Offsets.
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "file.h"
 #include "crypt.h"
@@ -189,7 +191,7 @@ static void getOtp(char * digest, uint8_t * otp, long long int offset, long long
         exit(1);
     }
 
-	if (fseek(f, offset, SEEK_SET) == -1) {
+	if (lseek(f, offset, SEEK_SET) == -1) {
 		perror("fseek");		
 		exit(1);
 	}
@@ -202,7 +204,7 @@ if (fread(otp, sizeof(uint8_t), len, f) == 0) { fprintf(stderr, "Failed to load 
 void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int offset, long long int len) {
     uint8_t otp[len];
     FILE * f = fopen(filename, "rb");
-	if (fseek(f, offset, SEEK_SET) == -1) {
+	if (lseek(f, offset, SEEK_SET) == -1) {
 		perror("fseek");		
 		exit(1);
 	}
