@@ -12,6 +12,8 @@ Description: Functions for dealing with OTPs and Offsets.
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "file.h"
 #include "crypt.h"
@@ -183,14 +185,14 @@ static void getOtp(char * digest, uint8_t * otp, long long int offset, long long
     findFilename(filename, digest, NULL);
     
     FILE * f = fopen(filename, "rb");
-    fprintf(stdout, "%s\n", filename);
+	int fd = fileno(f);
     if (f == NULL) {
         fprintf(stderr, "ERROR: Could not locate otp to use\n");
         exit(1);
     }
 
-	if (fseek(f, offset, SEEK_SET) == -1) {
-		perror("fseek");		
+	if (lseek(fd, offset, SEEK_SET) == -1) {
+		perror("lseek");		
 		exit(1);
 	}
 if (fread(otp, sizeof(uint8_t), len, f) == 0) { fprintf(stderr, "Failed to load OTP\n");
@@ -202,8 +204,9 @@ if (fread(otp, sizeof(uint8_t), len, f) == 0) { fprintf(stderr, "Failed to load 
 void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int offset, long long int len) {
     uint8_t otp[len];
     FILE * f = fopen(filename, "rb");
-	if (fseek(f, offset, SEEK_SET) == -1) {
-		perror("fseek");		
+	int fd = fileno(f);
+	if (lseek(fd, offset, SEEK_SET) == -1) {
+		perror("lseek");		
 		exit(1);
 	}
     if (fread(otp, sizeof(uint8_t), len, f) == 0) {
