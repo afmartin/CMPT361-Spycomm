@@ -23,8 +23,7 @@ AWESOME HEADER BLOCK
 #define FALSE 0
 #define MAXLEN 512
 #define MAX_FILE_NAME 64
-#define MAX_MD5LEN 16
-#define MAX_FILE_LENGTH_AS_STRING 10
+#define MAX_FILE_LENGTH_AS_STRING 21 
 
 #define T_TYPE 'T'
 #define F_TYPE 'F'

@@ -12,11 +12,11 @@ Description:
 #define _FILE_H
 #define MAX_PACKET_LEN 512
 
-size_t getFileSize(int fd);
+long long int getFileSize(int fd);
 /* The function takes a file descriptor as parameters and
    returns the size of the file in bytes. */
 
-uint8_t ** getFileArray(FILE* file, int fileSize);
+uint8_t ** getFileArray(FILE* file, unsigned long fileSize);
 /* Takes a file pointer, the size of the file in bytes, and a
    pointer to a uint8_t array as parameters. Puts the contents
    of the file into the array. Returns 0 on success and -1

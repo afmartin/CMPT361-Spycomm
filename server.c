@@ -3,15 +3,14 @@
   CMPT 361 - Assignment 3                                                         
   Group 4: Nick, John, Alex, Kevin
   November 6th, 2015
-  Filename: server.c
-  Description:
+  Filename: server.c Description:
   #################################################################################
 */
 
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <getopt.h>
+#include <getopt.h> 
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,14 +20,16 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 #include "server.h"
 #include "file.h"
 #include "netCode.h"
-//#include "digest.h"
+#include "crypt.h"
+#include "digest.h"
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36115" // This can change and should be in our protocol
+#define DEFAULT_PORT "3615" // This can change and should be in our protocol
 
 #define MAX_THREAD 5
 
@@ -42,15 +43,15 @@ volatile int running = 1;
 
 typedef struct _fileInfo {
   char filename[MAX_FILE_NAME];
-  int fileLen;
-  char padID[MAX_MD5LEN + 1];
+  long long int fileLen;
+  char padID[MD5_STRING_LENGTH];
 } fileInfo;
 
 void printUsage(char* name) {
-  fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
-  fprintf(stdout, "       h: displays file usage information\n");
-  fprintf(stdout, "       p: takes an argument <port number> that will specify"
-	  "the port number to be used. Default port number is 36115\n");
+    fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
+    fprintf(stdout, "       h: displays file usage information\n");
+    fprintf(stdout, "       p: takes an argument <port number> that will specify"
+                "the port number to be used. Default port number is 36115\n");
 }
 
 int getSocket(char* port) {
@@ -77,7 +78,7 @@ int getSocket(char* port) {
       fprintf(stderr, "Error creating socket\n");
       continue;
     }
-
+    
     /* bind port to socket */
     num = bind(sd, i->ai_addr, i->ai_addrlen);
     if (num == -1) {
@@ -101,14 +102,6 @@ int getSocket(char* port) {
   }
   freeaddrinfo(res);
   return sd;
-}
-
-int getPadOffset(int padID) {
-
-  return 0;
-  /*takes padID as input, returns 0 if successful,
-    otherwise returns the numbers we have for error
-    codes in the protocol */
 }
 
 int initFileTransfer(int cd, fileInfo *info) {
@@ -155,7 +148,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     temp[position] = '\0';
 	
     //convert the string to an int
-    info->fileLen = atoi(temp);
+    info->fileLen = atoll(temp);
 	
     ptr++;
     position = 0;
@@ -172,7 +165,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     //Copy the string into the struct
     strcpy(info->padID, temp);
 	
-    printf("%s -- %d -- %s\n", info->filename, info->fileLen, info->padID);
+    printf("%s -- %lli -- %s\n", info->filename, info->fileLen, info->padID);
   }
   else return FALSE;
   
@@ -204,8 +197,10 @@ void* worker(void * arg) { //this is the function that threads will call
   uint8_t ack = 'A';
 	
   uint8_t * fileContents; //+1 to allow for null term
+
+  //TODO: No magic numbers
   char folder[100] = "./serverfiles/";
-  char *t; //time string
+  char t[100]; //time string
   struct stat st = {0};
 
   printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
@@ -222,9 +217,12 @@ void* worker(void * arg) { //this is the function that threads will call
 			
 			
       if (initFileTransfer(cd, info)){
-	int left = info->fileLen;
+	long long int left = info->fileLen;
 	getCurrentTime(t);
+
+    // TODO: Use strncat
 	strcat(folder, t);
+    // TODO: Create serverfiles if DNE.
 	if (stat(folder, &st) == -1)
 	  mkdir(folder, 0700);
 	strcat(folder, "/");
@@ -232,7 +230,29 @@ void* worker(void * arg) { //this is the function that threads will call
 	printf("folder is %s\n", folder);
 	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
 	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
-	sendAll(cd, &ack, sizeof(ack));
+    
+    // Check if we have the pad, if we have enough room
+    long long int padSize = 0;
+    long long int padOffset = 0;
+
+    getOffsetAndSize(info->padID, &padOffset, &padSize);
+
+    if (padSize == 0) {
+        sendAll(cd, "E2", 2);
+        return NULL;
+        // Not enough room in pad
+    } else if (info->fileLen > (padSize - padOffset)) {
+        sendAll(cd, "E1", 2);
+        return NULL;
+    }
+
+    char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
+	memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
+    snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
+
+
+
+	sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
 	while(!done){ // accepting a single file loop
 					
 	  //Determines how many bytes we need to receive
@@ -240,7 +260,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  //remaining at the end of the file
 	  int get;
 	  //left = info->fileLen - (ptr - fileContents);
-	  printf("\n value of left is %d\n", left);
+	  printf("\n value of left is %lli\n", left);
 	  if (left < MAXLEN + 1){
 	    get = left;
 	  }
@@ -284,12 +304,17 @@ void* worker(void * arg) { //this is the function that threads will call
 	  }
 	  //if we receive another packet
 	  else if (packet[0] == (uint8_t) 'F'){
-	    printf("%s\n\n", packet + 1);
+	    printf("Encrypted: %s\n\n", packet + 1);
 	    //DONE;
 	    //getMd5Digest(packet+1, info->fileLen, temp);
 	    //convertMd5ToString(filePath, temp);
 	    //strcat(folder, filePath); //concat file path with md5 digest
-						
+
+	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
+        padOffset += get;
+		setOffset(info->padID, padOffset);
+
+	    printf("Decrypted: %s\n\n", packet + 1);
 	    //copy the data from the packet into the fileContents
 	    //And then increment the pointer
 	    writeToFile(folder, packet + 1, get);

@@ -12,6 +12,8 @@ Description: Functions for dealing with OTPs and Offsets.
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "file.h"
 #include "crypt.h"
@@ -32,11 +34,11 @@ Description: Functions for dealing with OTPs and Offsets.
  *
  * Data structure to function like a map
  * where the digest string representation is the
- * key, and the value is the offset.
+ * key, and using that we can find file size and offset..
  */
 typedef struct _DigestMap {
-    unsigned long offset;
-    char digest[FILENAME_LEN];
+    long long int offset;
+    char digest[MD5_STRING_LENGTH];
 } DigestMap;
 
 static DigestMap ** map;
@@ -54,35 +56,16 @@ static int map_count = 0;
  * char * digest - the string representation of digest.
  */
 static int findPosition(char * digest) {
+    if (map == NULL || map_count == 0) {
+        return -1;
+    }
     for (int i=0; i < map_count; i++) {
-        if (strcmp(digest, map[i]->digest)) {
+        if (strcmp(digest, map[i]->digest) == 0) {
             return i;
         }
     }
     return -1;
 }
-
-/**
- * getOffset
- *
- * Given a binary digest, find the current offset.
- *
- * Args:
- * uint8_t * digest - binary representation of digest 
- *
- * Returns:
- * unsigned long of the offset is found.
- */
-static unsigned long getOffset(uint8_t * digest) {
-    char digestStr[MD5_STRING_LENGTH];
-    convertMd5ToString(digestStr, digest);
-    int position = findPosition(digestStr);
-    if (position == -1) {
-        return 0;
-    } else {
-        return map[position]->offset;
-    }
-} 
 
 /**
  * findFilename
@@ -91,14 +74,19 @@ static unsigned long getOffset(uint8_t * digest) {
  *
  * Args:
  * char * filename - pointer to memory of FILENAME_LEN bytes to write to
- * uint8_t * digest - binary representation of digest.
+ * char * digestStr - string representation of digest.  Set NULL if if using digestRaw
+ * uint8_t * digestRaw - binary representation of digest. Set NULL if provide digestStr
  */
-static void findFilename(char * filename, uint8_t * digest) {
-    char digestStr[MD5_STRING_LENGTH];
-    convertMd5ToString(digestStr, digest);
+static void findFilename(char * filename, char * digestStr, uint8_t * digestRaw) {
+    // Only necessary if given raw digest
+	memset(filename, 0, FILENAME_LEN);
+    char digest[MD5_STRING_LENGTH];
+    if (digestStr == NULL || digestRaw != NULL) {
+        convertMd5ToString(digest, digestRaw);
+    }
 
     strncat(filename, DIRECTORY_OF_OTP, FILENAME_LEN);
-    strncat(filename, digestStr, FILENAME_LEN);
+    strncat(filename, (digestStr == NULL ? digest : digestStr), FILENAME_LEN);
     strncat(filename, EXTENSION, FILENAME_LEN);
 }
 
@@ -115,8 +103,9 @@ static void writeMap() {
 		exit(1);
 	}
 
+    // We don't save file size info incase file size changes.
 	for (int i = 0; i < map_count; i++) { 
-		fprintf(f, "%s:%lu\n", map[i]->digest, map[i]->offset);
+		fprintf(f, "%s:%lli\n", map[i]->digest, map[i]->offset);
 	}
 	fclose(f);
 }
@@ -186,52 +175,97 @@ static void changeMapOffset(int position, unsigned long offset) {
  * binary digest of it.
  *
  * Args:
- * uint8_t * digest - Array of bytes to represent digest
+ * char * digest - string representation of digest
  * uint8_t * otp - pointer to memory for segment of OTP specified by offset, and has size len.
- * unsigned long offset - offset in file to load from
- * unsigned long len - the amount of data to retrieve starting from offset
+ * long long int offset - offset in file to load from
+ * long long int len - the amount of data to retrieve starting from offset
  */
-static void getOtp(uint8_t * digest, uint8_t * otp, unsigned long offset, unsigned long len) {
+static void getOtp(char * digest, uint8_t * otp, long long int offset, long long int len) {
     char filename[FILENAME_LEN];
-    findFilename(filename, digest);
+    findFilename(filename, digest, NULL);
     
     FILE * f = fopen(filename, "rb");
+	int fd = fileno(f);
     if (f == NULL) {
-        return NULL;  
+        fprintf(stderr, "ERROR: Could not locate otp to use\n");
+        exit(1);
     }
 
-	if (fseek(f, offset, SEEK_SET) == -1) {
-		perror("fseek");		
+	if (lseek(fd, offset, SEEK_SET) == -1) {
+		perror("lseek");		
 		exit(1);
 	}
-
-    if (fread(otp, sizeof(uint8_t), len, f) == 0) {
-		fprintf(stderr, "Failed to load OTP\n");
+if (fread(otp, sizeof(uint8_t), len, f) == 0) { fprintf(stderr, "Failed to load OTP\n");
 		exit(1);
     }
 	fclose(f);
 }
 
-void crypt(uint8_t * data, int data_pos, uint8_t * digest, unsigned long offset, unsigned long len) {
-	uint8_t otp[len];
+void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int offset, long long int len) {
+    uint8_t otp[len];
+    FILE * f = fopen(filename, "rb");
+	int fd = fileno(f);
+	printf("%d\n", fd);
+	if (lseek(fd, offset, SEEK_SET) == -1) {
+		perror("lseek");		
+		exit(1);
+	}
+    if (fread(otp, sizeof(uint8_t), len, f) == 0) {
+        fprintf(stderr, "ERROR: Could not load otp\n");
+        exit(1);
+    }
+    for (int i=0; i<len; i++) {
+        data[i + data_pos] = data[i + data_pos] ^ otp[i];
+    }
+    fclose(f);
+}
+
+void getOffsetAndSize(char * digest, long long int * offset, long long int * size) {
+    int i = findPosition(digest);
+    if (i != -1) {
+        *offset = map[i]->offset;
+    } else {
+        *offset = 0;
+    }
+
+    char filename[FILENAME_LEN];
+    memset(filename, 0, FILENAME_LEN);
+    findFilename(filename, digest, NULL);
+    fprintf(stdout, "%s\n", filename);
+    
+    FILE * f = fopen(filename, "rb");
+    if (f == NULL) {
+        *size = 0; // otp not found
+    } else {
+        int fd = fileno(f);
+        *size = getFileSize(fd);
+        fclose(f);
+    }
+}
+
+void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  offset, long long int len) {
+	uint8_t * otp = malloc(len);
+    if (otp == NULL) {
+        fprintf(stderr, "ERROR: Could not allocate room for OTP.\n");
+        exit(1);
+    }
 	getOtp(digest, otp, offset, len);
     for (int i=0; i<len; i++) {
         data[i + data_pos] = data[i + data_pos] ^ otp[i];
     }
+    free(otp);
 }
 
-void setOffset(uint8_t * digest, unsigned long offset) {
+void setOffset(char * digest, long long int offset) {
 	// Ref for Mutex from Dr. Nicholas M. Boer's CMPT 360 Lock Lecture Slides
 	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	pthread_mutex_lock (&lock);
-    char digestStr[MD5_STRING_LENGTH];
-    convertMd5ToString(digestStr, digest);
 
-    int position = findPosition(digestStr);
+    int position = findPosition(digest);
     if (position == -1) {
         // doesn't exist in map... add it.
-        addToMap(digestStr);
-		changeMapOffset(findPosition(digestStr), offset);
+        addToMap(digest);
+		changeMapOffset(findPosition(digest), offset);
     } else {
         changeMapOffset(position, offset);
     }
@@ -249,8 +283,17 @@ void readMap() {
 	}
 
 	char digest[MD5_STRING_LENGTH];
-	unsigned long offset;
-	while (fscanf(f, "%" MD5_LENGTH_STRING "s:%lu\n", digest, offset) == 2) {
+	long long int offset;
+	while (fscanf(f, "%" MD5_LENGTH_STRING "s:%lli\n", digest, &offset) == 2) {
+
+        // Check if the file still exists!
+        char filename[FILENAME_LEN];
+        findFilename(filename, digest, NULL);
+        FILE * otp = fopen(filename, "r");
+        if (otp == NULL) {
+            continue; 
+        }
+        fclose(otp);
 		setOffset(digest, offset);
 	}
 	fclose(f);

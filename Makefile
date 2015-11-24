@@ -7,7 +7,9 @@
 #############################################################
 
 CC = gcc
-CFLAGS = -D_POSIX_C_SOURCE=200809L -g -Wall -pedantic -std=c99
+# Note: -FILE_OFF_SET_BITS=64 makes sure that fstats uses a 64 bit value to represent a file size
+# even on a 32 bit system.
+CFLAGS = -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 -g -Wall -pedantic -std=c99
 LDLIBS = -lpthread -lm
 
 .PHONY: all clean
