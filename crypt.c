@@ -205,6 +205,7 @@ void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int of
     uint8_t otp[len];
     FILE * f = fopen(filename, "rb");
 	int fd = fileno(f);
+	printf("%d\n", fd);
 	if (lseek(fd, offset, SEEK_SET) == -1) {
 		perror("lseek");		
 		exit(1);
@@ -216,6 +217,7 @@ void clientCrypt(uint8_t * data, int data_pos, char * filename, long long int of
     for (int i=0; i<len; i++) {
         data[i + data_pos] = data[i + data_pos] ^ otp[i];
     }
+    fclose(f);
 }
 
 void getOffsetAndSize(char * digest, long long int * offset, long long int * size) {
