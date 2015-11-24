@@ -248,7 +248,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 			fprintf(stderr, "An Error occured reading %s\n", fileName);
 			exit(0);
 		}
-
+		//		printf("%s\n", padPath);
         clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
 		offset += read;
 

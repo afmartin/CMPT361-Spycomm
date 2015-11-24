@@ -29,7 +29,7 @@
 
 #define DONE printf("done\n")
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "36115" // This can change and should be in our protocol
+#define DEFAULT_PORT "3615" // This can change and should be in our protocol
 
 #define MAX_THREAD 5
 
@@ -78,7 +78,7 @@ int getSocket(char* port) {
       fprintf(stderr, "Error creating socket\n");
       continue;
     }
-
+    
     /* bind port to socket */
     num = bind(sd, i->ai_addr, i->ai_addrlen);
     if (num == -1) {
