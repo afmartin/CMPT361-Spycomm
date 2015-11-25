@@ -21,23 +21,25 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <ncurses/ncurses.h>
 #include "server.h"
 #include "file.h"
 #include "netCode.h"
 #include "crypt.h"
 #include "digest.h"
+#include "screen.h"
 
-#define DONE printf("done\n")
+#define DONE mvprintw(1, 1, "done\n"); refresh()
 #define MAX_CONNECTIONS 10
-#define DEFAULT_PORT "3615" // This can change and should be in our protocol
+#define DEFAULT_PORT "36115" // This can change and should be in our protocol
 
-#define MAX_THREAD 5
+#define MAX_THREAD 8
 
-/* typedef struct _threadArgs{ */
+typedef struct _threadArgs{
   
-/*   int sockfd; */
-/*   fileInfo info; */
-/* } threadArgs; */
+  int sockfd;
+  Box box;
+} threadArgs;
 
 volatile int running = 1;
 
@@ -46,6 +48,9 @@ typedef struct _fileInfo {
   long long int fileLen;
   char padID[MD5_STRING_LENGTH];
 } fileInfo;
+
+pthread_mutex_t mutexlock;
+
 
 void printUsage(char* name) {
     fprintf(stdout, "usage: %s [-h] [-p <port number>]\n", name);
@@ -165,7 +170,7 @@ int initFileTransfer(int cd, fileInfo *info) {
     //Copy the string into the struct
     strcpy(info->padID, temp);
 	
-    printf("%s -- %lli -- %s\n", info->filename, info->fileLen, info->padID);
+    //printf("%s -- %lli -- %s\n", info->filename, info->fileLen, info->padID);
   }
   else return FALSE;
   
@@ -185,12 +190,16 @@ int initFileTransfer(int cd, fileInfo *info) {
 
 
 void* worker(void * arg) { //this is the function that threads will call
-	
+  
+  //DONE;
+  threadArgs * ta = (threadArgs *) arg;
   int done = 0;
   int k = 0;
   //uint8_t* temp;
   //char* filePath;
-  int * sd = (int*) arg;
+  //DONE;
+  int sd = ta->sockfd;
+  //DONE;
   uint8_t packet[MAXLEN + 1];
   memset(packet, 0 , MAXLEN + 1);
   //size_t len = MAXLEN;
@@ -203,9 +212,9 @@ void* worker(void * arg) { //this is the function that threads will call
   char t[100]; //time string
   struct stat st = {0};
 
-  printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
+  //printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
   while (TRUE){
-    int cd = acceptCon(*sd); //wait for a client to connect
+    int cd = acceptCon(sd); //wait for a client to connect
     
 		
     while (cd) { // full file transfer loop, allows for multiple filetrans
@@ -227,7 +236,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  mkdir(folder, 0700);
 	strcat(folder, "/");
 	strcat(folder, (*info).filename);
-	printf("folder is %s\n", folder);
+	//$$printf("folder is %s\n", folder);
 	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
 	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
     
@@ -247,7 +256,7 @@ void* worker(void * arg) { //this is the function that threads will call
     }
 
     char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
-	memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
+    memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
     snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
 
 
@@ -260,7 +269,7 @@ void* worker(void * arg) { //this is the function that threads will call
 	  //remaining at the end of the file
 	  int get;
 	  //left = info->fileLen - (ptr - fileContents);
-	  printf("\n value of left is %lli\n", left);
+	  //$$printf("\n value of left is %lli\n", left);
 	  if (left < MAXLEN + 1){
 	    get = left;
 	  }
@@ -297,14 +306,14 @@ void* worker(void * arg) { //this is the function that threads will call
 	  
 	  //if we receive the 'D'
 	  if(packet[0] == (uint8_t) 'D'){
-	    DONE;
+	    //DONE;
 	    sendAll(cd, &ack, sizeof(ack));
 	    done = 1;
 	    break;
 	  }
 	  //if we receive another packet
 	  else if (packet[0] == (uint8_t) 'F'){
-	    printf("Encrypted: %s\n\n", packet + 1);
+	    //$$$printf("Encrypted: %s\n\n", packet + 1);
 	    //DONE;
 	    //getMd5Digest(packet+1, info->fileLen, temp);
 	    //convertMd5ToString(filePath, temp);
@@ -314,17 +323,20 @@ void* worker(void * arg) { //this is the function that threads will call
         padOffset += get;
 		setOffset(info->padID, padOffset);
 
-	    printf("Decrypted: %s\n\n", packet + 1);
+		//$$$printf("Decrypted: %s\n\n", packet + 1);
 	    //copy the data from the packet into the fileContents
 	    //And then increment the pointer
 	    writeToFile(folder, packet + 1, get);
+	    //pthread_mutex_lock(&mutexlock);
+	    progressBar(&(ta->box), info->fileLen);
+	    //pthread_mutex_unlock(&mutexlock);
 	    //memcpy(ptr, packet + 1, get);
 	    left = left - get;//strlen((char*)packet+1);
 	    //ptr += get;
 	  }
 	  else {
 	    printf("Received erroneous data!\n");
-	    printf("%s\n", packet);
+	    //$$printf("%s\n", packet);
 	  }
 	  memset(packet, 0, sizeof(packet));
 	}
@@ -353,7 +365,7 @@ void* worker(void * arg) { //this is the function that threads will call
       printf("Write to File failed!\n");
       pthread_exit(NULL);
     }
-    printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
+    //$$printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
   }
   //pthread_exit(NULL);
   return NULL;
@@ -365,8 +377,9 @@ int main(int argc, char* argv[]) {
   int opt, sd, i;
   char *port = DEFAULT_PORT;
   pthread_t tid[MAX_THREAD];
-
   
+  threadArgs args[MAX_THREAD];
+
   while ((opt = getopt(argc, argv, "hp:")) != -1) {
 
     switch(opt) {
@@ -385,10 +398,32 @@ int main(int argc, char* argv[]) {
       exit(0);
     }
   }
+  initscr();
+  noecho();
+  Box boxes[MAXBOXES];
+  int y = 2;
+  for (int i = 0; i< MAXBOXES; i+=2){
+    Box box1 = {.boxNo = i, .progress = 0, .state = 0,
+                .row = y,
+                .column = COLUMN1};
+    Box box2 = {.boxNo = i+1, .progress = 0, .state = 0,
+                .row = y,
+                .column = COLUMN2};
+    boxes[i] = box1;
+    boxes[i+1] = box2;
+    y += HEIGHT+1;
+  }
+  for (int i = 0; i < MAXBOXES; i++)
+    drawBox(boxes[i]);
+  refresh();
   
   sd = getSocket(port); //This should be in netCode.h
+  pthread_mutex_init(&mutexlock, NULL);
   for (i = 0; i < MAX_THREAD; i++) { //create threads
-    pthread_create(&tid[i], NULL, worker, &sd);
+    args[i].sockfd = sd;
+    args[i].box = boxes[i];
+    pthread_create(&tid[i], NULL, worker, &args[i]);
+    
   }
   
   signal(SIGINT, inputHandler); //catch ctrl-c
@@ -397,8 +432,13 @@ int main(int argc, char* argv[]) {
   
   printf("Killing threads...\n");
   for (i = 0; i < MAX_THREAD; i++) {
+    
     pthread_kill(tid[i], SIGKILL);
   }
+  
+  pthread_mutex_destroy(&mutexlock);
+  //  pthread_exit(NULL);
+  endwin();
   return 0;
 }
 
