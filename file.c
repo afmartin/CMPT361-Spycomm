@@ -61,7 +61,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
-  printf("called\n");
+  //printf("called\n");
   fp = fopen(filename, "ab+"); //open file to write
   if (fp == NULL) {
     fprintf(stderr, "Error opening file '%s'\n", filename);
@@ -78,7 +78,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   }
   
   fclose(fp);
-  printf("Closed the file!\n");
+  //printf("Closed the file!\n");
   return 1;
 }
 
@@ -99,7 +99,7 @@ void getCurrentTime(char* timeString) {
   timeInfo= localtime(&currTime);
   strftime(timeString, 100, "%F:%T", timeInfo);
   //timeString = asctime(timeInfo);
-  printf("Current local time and date: %s\n", timeString);
+  //$$  printf("Current local time and date: %s\n", timeString);
 
 }
 	       
