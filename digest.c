@@ -11,8 +11,23 @@ Description: Functions for computing MD5 digests
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include "digest.h"
+#include "file.h"
+
+void getMd5DigestFromFile(char * filename, uint8_t * digest) {
+    FILE *f = fopen(filename, "rb");
+    int fd = fileno(f);
+    long long int filesize = getFileSize(fd);
+    uint8_t * data = malloc(filesize);
+    if (data == NULL) {
+        fprintf(stderr, "Could not allocate room for md5 digest\n");
+        exit(1);
+    }
+    fread(data, sizeof(uint8_t), filesize, f);
+    getMd5Digest(data, filesize, digest);
+}
 
 bool compareMd5Digest(uint8_t * a, uint8_t * b) {
 	for (int i=0; i<MD5_DIGEST_BYTES; i++) {

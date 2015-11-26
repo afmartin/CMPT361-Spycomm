@@ -5,17 +5,17 @@
 #Filename: Makefile
 #Description:
 #############################################################
-
-CC = gcc
-CFLAGS = -D_POSIX_C_SOURCE=200809L -g -Wall -pedantic -std=c99
-LDLIBS = -lpthread -lncurses -lm
+# Note: -FILE_OFF_SET_BITS=64 makes sure that fstats uses a 64 bit value to represent a file size
+# even on a 32 bit system.
+CFLAGS = -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 -g -Wall -pedantic -std=c99
+LDLIBS = -lpthread -lm -lncurses
 
 
 .PHONY: all clean
 
 all: spycommd spycomm
 
-spycommd: server.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o
+spycommd: server.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o screen.o
 	$(CC)  $^ -o $@ $(LDLIBS)
 
 spycomm: client.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o
@@ -32,6 +32,7 @@ crypt.o: crypt.c crypt.h
 digest.o: digest.c digest.h
 digest/md5.o: digest/md5.c digest/md5.h
 digest/common.o: digest/common.c digest/common.h
+screen.o: screen.c screen.h
 
 clean:
 	$(RM) spycommd spycomm *.o digest/*.o
