@@ -34,6 +34,7 @@
 #define DEFAULT_PORT "36115" // This can change and should be in our protocol
 
 #define MAX_THREAD 8
+#define MAX_EVENTS 8
 
 typedef struct _threadArgs{
   
@@ -188,6 +189,16 @@ int initFileTransfer(int cd, fileInfo *info) {
   return TRUE;
 }
 
+void getClientAddr(struct sockaddr_storage client, char* addrString) {
+  char clientAddrString[INET6_ADDRSTRLEN] = "";
+  struct sockaddr_storage clientAddr = client;
+  socklen_t clientLen = sizeof(struct sockaddr_storage);
+
+  int k = getnameinfo((struct sockaddr *)&clientAddr, clientLen, addrString, sizeof(addrString), NULL, NULL, NI_NUMERICHOST);
+  if (k != 0) {
+    addrString = "Unknown";
+  } 
+}
 
 void* worker(void * arg) { //this is the function that threads will call
   
@@ -204,7 +215,7 @@ void* worker(void * arg) { //this is the function that threads will call
   memset(packet, 0 , MAXLEN + 1);
   //size_t len = MAXLEN;
   uint8_t ack = 'A';
-	
+  struct sockaddr_storage clientAddr;
   uint8_t * fileContents; //+1 to allow for null term
 
   //TODO: No magic numbers
@@ -214,9 +225,13 @@ void* worker(void * arg) { //this is the function that threads will call
 
   //printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
   while (TRUE){
-    int cd = acceptCon(sd); //wait for a client to connect
+    pthread_mutex_lock(&mutexlock);
+    displayWaiting(ta->box);
+    pthread_mutex_unlock(&mutexlock);
+    int cd = acceptCon(sd, &clientAddr); //wait for a client to connect
+    char address[100];
+    getClientAddr(clientAddr, address);
     
-		
     while (cd) { // full file transfer loop, allows for multiple filetrans
       fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
       if (info == NULL) {
@@ -227,6 +242,7 @@ void* worker(void * arg) { //this is the function that threads will call
       
       if (initFileTransfer(cd, info)){
 	long long int left = info->fileLen;
+	connectedToDisplay(ta->box, address, info->filename);
 	getCurrentTime(t);
 
     // TODO: Use strncat
@@ -435,6 +451,7 @@ int main(int argc, char* argv[]) {
   
   signal(SIGINT, inputHandler); //catch ctrl-c
   while(running) { //busy wait 
+    
   }
   
   printf("Killing threads...\n");

@@ -26,3 +26,4 @@ void connectedToDisplay(Box box, char * clientAddr, char * fileName);
 void progressBar(Box * box, long fileSize);
 void clearBox(Box box);
 void endBox(Box * box);
+void displayWaiting(Box box);

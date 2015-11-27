@@ -72,19 +72,19 @@ int sendAll(int sock, uint8_t * buffer, int len){
 	return sent;
 }
 
-int acceptCon(int socket) {
+int acceptCon(int socket, struct sockaddr_storage *clientAddr) {
   /* Handles client requests 
      will be updated to support Port Knocking */
 
-  struct sockaddr_storage clientAddr;
-  socklen_t clientAddrLen = sizeof(clientAddr);
+  socklen_t clientAddrLen = sizeof(*clientAddr);
   int cd;
 
-  cd = accept(socket, (struct sockaddr *) &clientAddr, &clientAddrLen);
+  cd = accept(socket, (struct sockaddr *) clientAddr, &clientAddrLen);
   if (cd == -1) {
     fprintf(stderr, "Error accepting connections\n");
     exit(1);
   }
+  
   return cd;
 }
 

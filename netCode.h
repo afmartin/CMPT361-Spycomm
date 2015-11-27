@@ -50,7 +50,7 @@ int sendAll(int sock, uint8_t * buffer, int len);
 
 
 //Accepts a new connection on the given socket
-int acceptCon(int socket);
+int acceptCon(int socket, struct sockaddr_storage *clientAddr);
 
 //Build and addrinfo struct linkedlist given an address and port
 struct addrinfo * buildAddrInfo (char * address, char * port);

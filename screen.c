@@ -74,7 +74,13 @@ void displayWaitingForConnection(Box boxes[]){
     }
   }
 }
-      
+
+void displayWaiting(Box box) {
+  clearBox(box);
+  mvprintw(box.row+2, box.column+2, "Awaiting a connection");
+  drawBox(box);
+}
+
 void displayHandshakeInfo(Box box, char * clientAddr){
   
   mvprintw(box.row+2, box.column+2, "Initiating handshake with:");
