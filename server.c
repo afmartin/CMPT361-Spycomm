@@ -286,7 +286,8 @@ void* worker(void * arg) { //this is the function that threads will call
 	refresh();
 	pthread_mutex_unlock(&mutexlock);
 	int iterations = info->fileLen/MAXLEN;
-	iterations == 0 ? iterations = 1 : iterations;
+	iterations += 1;
+	//iterations == 0 ? iterations = 1 : iterations;
 	while(!done){ // accepting a single file loop
 					
 	  //Determines how many bytes we need to receive
@@ -345,8 +346,8 @@ void* worker(void * arg) { //this is the function that threads will call
 	    //strcat(folder, filePath); //concat file path with md5 digest
 
 	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
-        padOffset += get;
-		setOffset(info->padID, padOffset);
+	    padOffset += get;
+	    setOffset(info->padID, padOffset);
 
 		//$$$printf("Decrypted: %s\n\n", packet + 1);
 	    //copy the data from the packet into the fileContents
@@ -356,6 +357,10 @@ void* worker(void * arg) { //this is the function that threads will call
 	    progressBar(&(ta->box), info->fileLen/MAXLEN);
 	    refresh();
 	    pthread_mutex_unlock(&mutexlock);
+	    if (ta->box.state == 0) {
+	      printf("a");
+	      sleep(3);
+	    }
 	    //memcpy(ptr, packet + 1, get);
 	    left = left - get;//strlen((char*)packet+1);
 	    //ptr += get;

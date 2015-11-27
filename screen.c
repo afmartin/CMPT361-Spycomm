@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ncurses/ncurses.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include "screen.h"
 
@@ -29,7 +30,7 @@ void connectedToDisplay(Box box, char * clientAddr, char * fileName){
    refresh();
 }
 
-void progressBar(Box * box, long fileSize){
+void progressBar(Box * box, long iterations){
    
   if (box->progress == 0){
     box->position = box->column + 1;
@@ -37,9 +38,9 @@ void progressBar(Box * box, long fileSize){
     box->percentage = 0.0;
     box->state = 1;
   }
-  box->progress ++;
+  //box->progress ++;
   
-  if (box->progress % (fileSize / MAXBAR) == 0){
+  if (box->progress % ((iterations / MAXBAR) + 1) == 0){
     attron(A_STANDOUT);
     mvaddch(box->row+4, box->position++, ' ');
     attroff(A_STANDOUT);
@@ -47,13 +48,25 @@ void progressBar(Box * box, long fileSize){
     mvprintw(box->row+5, box->column+1, "%.1f%%", box->percentage);
     move(0,0);
     refresh();
+    box->progress++;
   }
-  if (box->progress == fileSize){
+  if (box->progress == iterations){
+    if (iterations < MAXBAR){
+      for (int i = 0; i < MAXBAR - iterations; i++){
+	mvprintw(box->row+5, box->column+1, "100.0%%");
+	attron(A_STANDOUT);
+	mvaddch(box->row+4, box->position++, ' ');
+	attroff(A_STANDOUT);
+	move(0,0);
+	refresh();
+      }
+    }
     box->progress = 0;
     box->percentage = 0.0;
     box->state = 0;
   }	       
-}		       
+}		   
+    
 void clearBox(Box box){
   
   for (int i = box.row+1; i < box.row+HEIGHT; i++){
