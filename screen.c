@@ -19,6 +19,7 @@ void drawBox(Box box){
   mvaddch(y+HEIGHT, x, ACS_LLCORNER);
   mvaddch(y, x+WIDTH, ACS_URCORNER);
   mvaddch(y+HEIGHT, x+WIDTH, ACS_LRCORNER);
+  refresh();
 }
  
 void connectedToDisplay(Box box, char * clientAddr, char * fileName){

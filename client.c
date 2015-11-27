@@ -189,17 +189,8 @@ int initiateFileTransfer(int sock, char * fileName, char * length, char * padID)
 	}
 }
 
-void sendFile (char * address, char * port, char * fileName, char * padPath){
+void sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
 
-	struct addrinfo * serverInfo = buildAddrInfo(address, port);
-
-	//Attempts to grab a new socket
-	int sock = getSocket(serverInfo);
-	int check = connectTo(sock, serverInfo);
-	if (check == -1){
-		fprintf(stderr, "Cannot connect to server!\n");
-		exit(0);
-	}
 	
 	//Get info about the file to send
 	FILE * fp = fopen(fileName, "r");
@@ -286,8 +277,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath){
 		exit(1);
 	}
 	
-	close(sock);
-	freeaddrinfo(serverInfo);
+	//freeaddrinfo(serverInfo);
 
 }
 
@@ -296,6 +286,16 @@ int main (int argc, char * argv[]){
 	struct commandLine * opts = getOptions(argc, argv);
 	printf("Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
 	
+	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
+
+	//Attempts to grab a new socket
+	int sock = getSocket(serverInfo);
+	int check = connectTo(sock, serverInfo);
+	if (check == -1){
+		fprintf(stderr, "Cannot connect to server!\n");
+		exit(0);
+	}
+
 	int pos = 0;
 	for(int i = 0; i < opts->fileNum; i++){
 		char fileToSend[MAX_PATH_LEN];
@@ -305,7 +305,7 @@ int main (int argc, char * argv[]){
 
 		printf("\nSending: %s\n", fileToSend);
 		
-		sendFile(opts->address, opts->ports, fileToSend, opts->padPath);
+		sendFile(opts->address, opts->ports, fileToSend, opts->padPath, sock);
 	
 		pos += strlen(fileToSend) + 1;
 	}

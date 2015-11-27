@@ -238,19 +238,22 @@ void* worker(void * arg) { //this is the function that threads will call
 	fprintf(stderr, "Memory allocation failure\n");
 	exit(1);
       }
-			
+      
+      getCurrentTime(t);
+
+      // TODO: Use strncat                                                                                 
+      strcat(folder, t);
+      // TODO: Create serverfiles if DNE.                                                                  
+      if (stat(folder, &st) == -1)
+	mkdir(folder, 0700);
+      strcat(folder, "/");
+      
       
       if (initFileTransfer(cd, info)){
 	long long int left = info->fileLen;
 	connectedToDisplay(ta->box, address, info->filename);
 	getCurrentTime(t);
 
-    // TODO: Use strncat
-	strcat(folder, t);
-    // TODO: Create serverfiles if DNE.
-	if (stat(folder, &st) == -1)
-	  mkdir(folder, 0700);
-	strcat(folder, "/");
 	strcat(folder, (*info).filename);
 	//$$printf("folder is %s\n", folder);
 	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
