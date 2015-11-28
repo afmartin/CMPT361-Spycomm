@@ -189,12 +189,12 @@ int initFileTransfer(int cd, fileInfo *info) {
   return TRUE;
 }
 
-void getClientAddr(struct sockaddr_storage client, char* addrString) {
+void getClientAddr(struct sockaddr_storage * client, char* addrString) {
   char clientAddrString[INET6_ADDRSTRLEN] = "";
-  struct sockaddr_storage clientAddr = client;
+  //struct sockaddr_storage clientAddr = client;
   socklen_t clientLen = sizeof(struct sockaddr_storage);
 
-  int k = getnameinfo((struct sockaddr *)&clientAddr, clientLen, addrString, sizeof(addrString), NULL, NULL, NI_NUMERICHOST);
+  int k = getnameinfo((struct sockaddr *)&client, clientLen, addrString, sizeof(addrString), NULL, NULL, NI_NUMERICHOST);
   if (k != 0) {
     addrString = "Unknown";
   } 
@@ -202,20 +202,15 @@ void getClientAddr(struct sockaddr_storage client, char* addrString) {
 
 void* worker(void * arg) { //this is the function that threads will call
   
-  //DONE;
   threadArgs * ta = (threadArgs *) arg;
   int done = 0;
   int k = 0;
-  //uint8_t* temp;
-  //char* filePath;
-  //DONE;
   int sd = ta->sockfd;
-  //DONE;
   uint8_t packet[MAXLEN + 1];
   memset(packet, 0 , MAXLEN + 1);
-  //size_t len = MAXLEN;
   uint8_t ack = 'A';
   struct sockaddr_storage clientAddr;
+  char clientAddrString[INET6_ADDRSTRLEN] = "";
   uint8_t * fileContents; //+1 to allow for null term
 
   //TODO: No magic numbers
@@ -230,177 +225,188 @@ void* worker(void * arg) { //this is the function that threads will call
     pthread_mutex_unlock(&mutexlock);
     int cd = acceptCon(sd, &clientAddr); //wait for a client to connect
     char address[100];
-    getClientAddr(clientAddr, address);
+    //getClientAddr(clientAddr, address);
     
-    while (cd) { // full file transfer loop, allows for multiple filetrans
-      fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
-      if (info == NULL) {
-	fprintf(stderr, "Memory allocation failure\n");
-	exit(1);
-      }
-      
-      getCurrentTime(t);
+    getCurrentTime(t);
 
-      // TODO: Use strncat                                                                                 
-      strcat(folder, t);
-      // TODO: Create serverfiles if DNE.                                                                  
-      if (stat(folder, &st) == -1)
-	mkdir(folder, 0700);
+    // TODO: Use strncat                                                                                 
+    strcat(folder, t);
+    // TODO: Create serverfiles if DNE.                                                                  
+    if (stat(folder, &st) == -1)
+      mkdir(folder, 0700);
       strcat(folder, "/");
-      
-      
-      if (initFileTransfer(cd, info)){
-	long long int left = info->fileLen;
-	connectedToDisplay(ta->box, address, info->filename);
-	getCurrentTime(t);
-
-	strcat(folder, (*info).filename);
-	//$$printf("folder is %s\n", folder);
-	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
-	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
-    
-    // Check if we have the pad, if we have enough room
-    long long int padSize = 0;
-    long long int padOffset = 0;
-
-    getOffsetAndSize(info->padID, &padOffset, &padSize);
-
-    if (padSize == 0) {
-        sendAll(cd, "E2", 2);
-        return NULL;
-        // Not enough room in pad
-    } else if (info->fileLen > (padSize - padOffset)) {
-        sendAll(cd, "E1", 2);
-        return NULL;
-    }
-
-    char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
-    memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
-    snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
-
-
-
-	sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
-	pthread_mutex_lock(&mutexlock);
-	connectedToDisplay(ta->box, "192.168.0.15", info->filename);
-	refresh();
-	pthread_mutex_unlock(&mutexlock);
-	int iterations = info->fileLen/MAXLEN;
-	iterations += 1;
-	//iterations == 0 ? iterations = 1 : iterations;
-	while(!done){ // accepting a single file loop
-					
-	  //Determines how many bytes we need to receive
-	  //Either the Max packet length, or whatever is 
-	  //remaining at the end of the file
-	  int get;
-	  //left = info->fileLen - (ptr - fileContents);
-	  //$$printf("\n value of left is %lli\n", left);
-	  if (left < MAXLEN + 1){
-	    get = left;
-	  }
-	  else {
-	    get = MAXLEN;
-	  }
-					
-	  //Send an acknowledgement so the client knows when it should send data
-	  //sendAll(cd, &ack, sizeof(ack));
-					
-	  //If we are done receiving, get the 'D'
-	  if (get == 0){
-	    int didRecv = recv(cd, packet, 1, 0);
-	    if (didRecv == -1){
-	      printf("Received Failed!\n");
-	      pthread_exit(NULL);
-	    }
-	  }
-	  //Otherwise, recv as much as we need
-	  else {
-	    int didRecv = recvAll(cd, get + 1, packet);
-	    if (didRecv == -1){
-	      perror("");
-	      printf("Received Failed!\n");
-	      pthread_exit(NULL);
-	    }
-	    if (didRecv != get + 1){
-	      printf("Bad Coding!\n");
-	      pthread_exit(NULL);
-	    }
-	  }
-					
-	  //printByteArray(packet);
-	  
-	  //if we receive the 'D'
-	  if(packet[0] == (uint8_t) 'D'){
-	    //DONE;
-	    sendAll(cd, &ack, sizeof(ack));
-	    done = 1;
-	    break;
-	  }
-	  //if we receive another packet
-	  else if (packet[0] == (uint8_t) 'F'){
-	    //$$$printf("Encrypted: %s\n\n", packet + 1);
-	    //DONE;
-	    //getMd5Digest(packet+1, info->fileLen, temp);
-	    //convertMd5ToString(filePath, temp);
-	    //strcat(folder, filePath); //concat file path with md5 digest
-
-	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
-	    padOffset += get;
-	    setOffset(info->padID, padOffset);
-
-		//$$$printf("Decrypted: %s\n\n", packet + 1);
-	    //copy the data from the packet into the fileContents
-	    //And then increment the pointer
-	    writeToFile(folder, packet + 1, get);
-	    pthread_mutex_lock(&mutexlock);
-	    progressBar(&(ta->box), info->fileLen/MAXLEN);
-	    refresh();
-	    pthread_mutex_unlock(&mutexlock);
-	    if (ta->box.state == 0) {
-	      printf("a");
-	      sleep(3);
-	    }
-	    //memcpy(ptr, packet + 1, get);
-	    left = left - get;//strlen((char*)packet+1);
-	    //ptr += get;
-	  }
-	  else {
-	    printf("Received erroneous data!\n");
-	    //$$printf("%s\n", packet);
-	  }
-	  memset(packet, 0, sizeof(packet));
+      while (cd) { // full file transfer loop, allows for multiple filetrans
+	fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
+	if (info == NULL) {
+	  fprintf(stderr, "Memory allocation failure\n");
+	  exit(1);
 	}
-      } else{
+	
+	switch (clientAddr.ss_family) {
+	case PF_INET:
+	  if (inet_ntop(clientAddr.ss_family,
+			&((struct sockaddr_in *)&clientAddr)->sin_addr,
+			clientAddrString, INET6_ADDRSTRLEN) == NULL) {
+	    perror("inet_ntop (IPv4)");
+	    clientAddrString[0] = '\0';
+	  }
+	  break;
+	case PF_INET6:
+	  if (inet_ntop(clientAddr.ss_family,
+			&((struct sockaddr_in6 *)&clientAddr)->sin6_addr,
+			clientAddrString, INET6_ADDRSTRLEN) == NULL) {
+	    perror("inet_ntop (IPv6)");
+	    clientAddrString[0] = '\0';
+	  }
+	  
+	  break;
+	default:
+	  //fprintf(stderr, "warning: unexpected address family (%d)\n",
+	  //	clientAddr.ss_family);
+	  //clientAddrString = "bad addr";
+	  break;
+	}
+	if (initFileTransfer(cd, info)){
+	  long long int left = info->fileLen;
+	  getCurrentTime(t);
+	  
+	  strcat(folder, (*info).filename);
+	  //$$printf("folder is %s\n", folder);
+	  //fileContents = malloc(sizeof(uint8_t) * info->fileLen);
+	  //uint8_t * ptr = fileContents; // set pointer to start of fileContents
+	  
+	  // Check if we have the pad, if we have enough room
+	  long long int padSize = 0;
+	  long long int padOffset = 0;
+	  
+	  getOffsetAndSize(info->padID, &padOffset, &padSize);
+	  
+	  if (padSize == 0) {
+	    sendAll(cd, "E2", 2);
+	    return NULL;
+	    // Not enough room in pad
+	  } else if (info->fileLen > (padSize - padOffset)) {
+	    sendAll(cd, "E1", 2);
+	    return NULL;
+	  }
+	  
+	  char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
+	  memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
+	  snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
+	  
+	  
+	  
+	  sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
+	  pthread_mutex_lock(&mutexlock);
+	  connectedToDisplay(ta->box, clientAddrString, info->filename);
+	  refresh();
+	  pthread_mutex_unlock(&mutexlock);
+	  int iterations = info->fileLen/MAXLEN;
+	  iterations += 1;
+	  //iterations == 0 ? iterations = 1 : iterations;
+	  while(!done){ // accepting a single file loop
+	    
+	    //Determines how many bytes we need to receive
+	    //Either the Max packet length, or whatever is 
+	    //remaining at the end of the file
+	    int get;
+	    //left = info->fileLen - (ptr - fileContents);
+	    //$$printf("\n value of left is %lli\n", left);
+	    if (left < MAXLEN + 1){
+	      get = left;
+	    }
+	    else {
+	      get = MAXLEN;
+	    }
+	    
+	    //Send an acknowledgement so the client knows when it should send data
+	    //sendAll(cd, &ack, sizeof(ack));
+	    
+	    //If we are done receiving, get the 'D'
+	    if (get == 0){
+	      int didRecv = recv(cd, packet, 1, 0);
+	      if (didRecv == -1){
+		printf("Received Failed!\n");
+		pthread_exit(NULL);
+	      }
+	    }
+	    //Otherwise, recv as much as we need
+	    else {
+	      int didRecv = recvAll(cd, get + 1, packet);
+	      if (didRecv == -1){
+		perror("");
+		printf("Received Failed!\n");
+		pthread_exit(NULL);
+	      }
+	      if (didRecv != get + 1){
+		printf("Bad Coding!\n");
+		pthread_exit(NULL);
+	      }
+	    }
+	    
+	    //printByteArray(packet);
+	    
+	    //if we receive the 'D'
+	    if(packet[0] == (uint8_t) 'D'){
+	      //DONE;
+	      sendAll(cd, &ack, sizeof(ack));
+	      done = 1;
+	      break;
+	    }
+	    //if we receive another packet
+	    else if (packet[0] == (uint8_t) 'F'){
+	      //$$$printf("Encrypted: %s\n\n", packet + 1);
+	      //DONE;
+	      //getMd5Digest(packet+1, info->fileLen, temp);
+	      //convertMd5ToString(filePath, temp);
+	      //strcat(folder, filePath); //concat file path with md5 digest
+	      
+	      serverCrypt(packet, 1, info->padID, padOffset, get); 				
+	      padOffset += get;
+	      setOffset(info->padID, padOffset);
+	      
+	      //$$$printf("Decrypted: %s\n\n", packet + 1);
+	      //copy the data from the packet into the fileContents
+	      //And then increment the pointer
+	      writeToFile(folder, packet + 1, get);
+	      pthread_mutex_lock(&mutexlock);
+	      progressBar(&(ta->box), info->fileLen/MAXLEN);
+	      refresh();
+	      pthread_mutex_unlock(&mutexlock);
+	      
+	      //memcpy(ptr, packet + 1, get);
+	      left = left - get;//strlen((char*)packet+1);
+	      //ptr += get;
+	    }
+	    else {
+	      printf("Received erroneous data!\n");
+	      //$$printf("%s\n", packet);
+	    }
+	    memset(packet, 0, sizeof(packet));
+	}
+	} else{
+	  free(info);
+	  break;
+	}
+ 	
+	if (done) {
+	  close(cd);
+	  break;
+	}
 	free(info);
-	break;
+	//free(fileContents);
       }
-      //Add a folder prefix
-      //char folder[100] = "./serverfiles/";
-      //strcat(folder, (*info).filename);
-			
-      //Open a file and write the fileContents to it
-      //FILE * fp = fopen(folder, "wb+");
-      //k = fwrite(fileContents, 1, info->fileLen + 1, fp);
-      //      fclose(fp);
-			
-      if (done) {
+      if (k == -1){ //check return value of write to file
 	close(cd);
-	break;
+	printf("Write to File failed!\n");
+	pthread_exit(NULL);
       }
-      free(info);
-      //free(fileContents);
-    }
-    if (k == -1){ //check return value of write to file
-      close(cd);
-      printf("Write to File failed!\n");
-      pthread_exit(NULL);
-    }
-    //$$printf("Hello I'm thread %u and I've finished with client %d\n", (unsigned int) pthread_self(), cd );
+      ;
   }
-  //pthread_exit(NULL);
+  
   return NULL;
 }
+
 void inputHandler(int s) {
   running = 0;
 }

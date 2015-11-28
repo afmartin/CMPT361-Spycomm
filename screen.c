@@ -4,7 +4,9 @@
 #include <math.h>
 #include <string.h>
 #include "screen.h"
+#include <unistd.h>
 
+#define TEST 1
 
 void drawBox(Box box){
   
@@ -38,9 +40,17 @@ void progressBar(Box * box, long iterations){
     box->percentage = 0.0;
     box->state = 1;
   }
-  //box->progress ++;
-  
-  if (box->progress % ((iterations / MAXBAR) + 1) == 0){
+  box->progress ++;
+  if (iterations < MAXBAR){
+    box->percentage = 100.0;
+    attron(A_STANDOUT);
+    mvprintw(box->row+4, box->position, "%-*c", MAXBAR, ' ');
+    attroff(A_STANDOUT);
+    mvprintw(box->row+5, box->column+1, "%.1f%%", box->percentage);
+    
+  }
+  else if (box->progress % ((iterations / MAXBAR)) == 0 && 
+	   box->progress <= ((iterations / MAXBAR)) * MAXBAR){
     attron(A_STANDOUT);
     mvaddch(box->row+4, box->position++, ' ');
     attroff(A_STANDOUT);
@@ -48,23 +58,14 @@ void progressBar(Box * box, long iterations){
     mvprintw(box->row+5, box->column+1, "%.1f%%", box->percentage);
     move(0,0);
     refresh();
-    box->progress++;
   }
+  
   if (box->progress == iterations){
-    if (iterations < MAXBAR){
-      for (int i = 0; i < MAXBAR - iterations; i++){
-	mvprintw(box->row+5, box->column+1, "100.0%%");
-	attron(A_STANDOUT);
-	mvaddch(box->row+4, box->position++, ' ');
-	attroff(A_STANDOUT);
-	move(0,0);
-	refresh();
-      }
-    }
     box->progress = 0;
     box->percentage = 0.0;
     box->state = 0;
-  }	       
+  }
+  
 }		   
     
 void clearBox(Box box){
@@ -108,14 +109,14 @@ void displayHandshakeInfo(Box box, char * clientAddr){
 /*   Box boxes[MAXBOXES]; */
 /*   int y = 3; */
 /*   for (int i = 0; i< MAXBOXES; i+=2){ */
-/*     Box box1 = {.boxNo = i, .progress = 0, .state = 0,  */
+/*     Box box1 = {.boxNo = i, .progress = 0, .state = 0, */
 /* 		.row = y, */
 /* 		.column = COLUMN1}; */
-/*     Box box2 = {.boxNo = i+1, .progress = 0, .state = 0,  */
+/*     Box box2 = {.boxNo = i+1, .progress = 0, .state = 0, */
 /* 		.row = y, */
 /* 		.column = COLUMN2}; */
 /*     boxes[i] = box1; */
-/*     boxes[i+1] = box2;     */
+/*     boxes[i+1] = box2; */
 /*     y += HEIGHT+1; */
 /*   } */
 /*   /\* for (int i = 0; i < MAXBOXES; i++){ *\/ */
@@ -135,14 +136,15 @@ void displayHandshakeInfo(Box box, char * clientAddr){
 /*   connectedToDisplay(boxes[3], "192.168.32.1", "compress.c"); */
 /*   connectedToDisplay(boxes[4], "192.168.0.94", "hello.txt"); */
 
-/*   for (int i = 0; i < 76500001; i++){ */
-/*     progressBar(&boxes[1], 76500001); */
-/*     progressBar(&boxes[3], 76500001); */
-/*     progressBar(&boxes[4], 76500001); */
+/*   for (int i = 0; i < TEST; i++){ */
+/*     //sleep(1); */
+/*     progressBar(&boxes[1], TEST); */
+/*     progressBar(&boxes[3], TEST); */
+/*     progressBar(&boxes[4], TEST); */
 
 /*   } */
-/*   displayWaitingForConnection(boxes); */
-/*   displayHandshakeInfo(boxes[0], "192.168.0.92"); */
+/*   //displayWaitingForConnection(boxes); */
+/*   //displayHandshakeInfo(boxes[0], "192.168.0.92"); */
 /*   getch(); */
 /*   endwin(); */
 /* } */
