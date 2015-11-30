@@ -15,6 +15,7 @@ Description: Functions for computing MD5 digests
 #include <stdint.h>
 #include "digest.h"
 #include "file.h"
+#include "log.h"
 
 void getMd5DigestFromFile(char * filename, uint8_t * digest) {
     FILE *f = fopen(filename, "rb");
@@ -22,8 +23,8 @@ void getMd5DigestFromFile(char * filename, uint8_t * digest) {
     long long int filesize = getFileSize(fd);
     uint8_t * data = malloc(filesize);
     if (data == NULL) {
-        fprintf(stderr, "Could not allocate room for md5 digest\n");
-        exit(1);
+        fprintf(getLog(), "ERROR: Could not allocate room for md5 digest\n");
+		closeProgram(true, false);
     }
     fread(data, sizeof(uint8_t), filesize, f);
     getMd5Digest(data, filesize, digest);
@@ -44,7 +45,7 @@ void getMd5Digest(uint8_t * data, size_t len, uint8_t * digest) {
 	md5Start(&md);
 	int code = md5Add(&md, data, len);
 	if (code != 0) {
-		fprintf(stderr, "ERROR: Data too big for MD5 digest to be computed.");
+		fprintf(getLog(), "ERROR: Data too big for MD5 digest to be computed.\n");
 	}
 	md5End(&md, digest);
 }

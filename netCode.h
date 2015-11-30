@@ -29,6 +29,15 @@ AWESOME HEADER BLOCK
 #define F_TYPE 'F'
 #define D_TYPE 'D'
 
+// Error Number Definitions
+// Check RFC for details.
+#define NO_ROOM 1 // close connection
+#define PAD_INVALID 2 // close connection
+#define DATA_INVALID 3 // wait for data to be resent
+#define AUTH_NO_MATCH 4  // close connection
+#define CON_HANG 5 // close connection
+#define UNSPEC_ERROR 6 // close connection
+
 int recvAll (int sock, int amount, uint8_t * dest);
 
 //takes a socket and an addrinfo struct and attempts to connect to a remote host

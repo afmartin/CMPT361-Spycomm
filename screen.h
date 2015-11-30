@@ -1,5 +1,5 @@
 
-#include <ncurses/ncurses.h>
+#include <ncurses.h>
 #define MAXBOXES 8
 #define HEIGHT 7
 #define WIDTH 36

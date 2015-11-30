@@ -2,6 +2,12 @@
 spycomm
 spycommd
 zip
+otp
 otp\*
+serverfiles\*
+serverfiles
 digest\*.o
+offset.txt
+spycommd.txt
+spycomm.txt
 

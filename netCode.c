@@ -10,6 +10,8 @@ AWESOME HEADER BLOCK
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include "log.h"
 
 int recvAll (int sock, int amount, uint8_t * dest){
 	
@@ -18,8 +20,7 @@ int recvAll (int sock, int amount, uint8_t * dest){
 	while (pos - dest < amount){
 		int received = recv(sock, pos, amount - (pos - dest), 0);
 		if (received == -1){
-			fprintf(stderr, "Error recieving data\n");
-			perror("recv: ");
+			fprintf(getLog(), "ERROR: Error when recieving data: %s\n", strerror(errno));
 			return -1;
 		}
 		pos += received;
@@ -47,7 +48,7 @@ int connectTo (int sock, struct addrinfo * info){
   int returnCode = connect(sock, (struct sockaddr *) info->ai_addr, info->ai_addrlen);
   
   if (returnCode != 0){
-    fprintf(stderr, "Failed to connect!/n");
+    fprintf(getLog(), "ERROR: Failed to connect: %s/n", strerror(errno));
     return sock = -1;
   }
 	
@@ -81,8 +82,7 @@ int acceptCon(int socket, struct sockaddr_storage *clientAddr) {
 
   cd = accept(socket, (struct sockaddr *) clientAddr, &clientAddrLen);
   if (cd == -1) {
-    fprintf(stderr, "Error accepting connections\n");
-    exit(1);
+    fprintf(getLog(), "ERROR: Error accepting connection(s): %s\n", strerror(errno));
   }
   
   return cd;
@@ -99,12 +99,14 @@ struct addrinfo * buildAddrInfo (char * address, char * port){
   int returnCode = getaddrinfo(address, port, &hints, &res);
   
   if (returnCode != 0){
-    perror("Getaddrinfo failure: ");
-    exit(1);
+
+    fprintf(getLog(), "ERROR: Getaddrinfo failure: %s\n", gai_strerror(returnCode));
+	closeProgram(true, false);
   }
   
   else{
 		return res;
 	}
 	
+  return NULL;
 }

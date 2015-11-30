@@ -15,10 +15,10 @@ LDLIBS = -lpthread -lm -lncurses
 
 all: spycommd spycomm
 
-spycommd: server.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o screen.o
+spycommd: server.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o screen.o log.o
 	$(CC)  $^ -o $@ $(LDLIBS)
 
-spycomm: client.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o
+spycomm: client.o crypt.o compress.o user.o file.o netCode.o digest.o digest/md5.o digest/common.o log.o
 	$(CC)  $^ -o $@ $(LDLIBS)
 
 server.o: server.c 
@@ -33,6 +33,7 @@ digest.o: digest.c digest.h
 digest/md5.o: digest/md5.c digest/md5.h
 digest/common.o: digest/common.c digest/common.h
 screen.o: screen.c screen.h
+log.o: log.c log.h
 
 clean:
 	$(RM) spycommd spycomm *.o digest/*.o
