@@ -223,244 +223,256 @@ void getClientAddr(struct sockaddr_storage * client, char* addrString) {
 
 void* worker(void * arg) { //this is the function that threads will call
 
-	threadArgs * ta = (threadArgs *) arg;
-	int done = 0;
-	int k = 0;
-	int sd = ta->sockfd;
-	uint8_t packet[MAXLEN + 1];
-	memset(packet, 0 , MAXLEN + 1);
-	uint8_t ack = 'A';
-	struct sockaddr_storage clientAddr;
-	char clientAddrString[INET6_ADDRSTRLEN] = "";
-	uint8_t * fileContents; //+1 to allow for null term
-
-	//TODO: No magic numbers
-	char folder[100] = "./serverfiles/";
-	char t[100]; //time string
-	struct stat st = {0};
-
-	//printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
-	while (TRUE){
-		pthread_mutex_lock(&mutexlock);
-		displayWaiting(ta->box);
-		pthread_mutex_unlock(&mutexlock);
-		int cd = acceptCon(sd, &clientAddr); //wait for a client to connect
-		char address[100];
-		//getClientAddr(clientAddr, address);
-
-		getCurrentTime(t);
-
-		// TODO: Use strncat                                                                    
-		strcat(folder, t);
-		// TODO: Create serverfiles if DNE
-		if (stat(folder, &st) == -1)
-			mkdir(folder, 0700);
-		strcat(folder, "/");
-		while (cd) { // full file transfer loop, allows for multiple filetrans
-			fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
-			if (info == NULL) {
-				fprintf(getLog(), "ERROR: Memory allocation failure: %s\n", strerror(errno));
-				sendError(cd, UNSPEC_ERROR);
-				closeProgram(true, true);
-			}
-
-			switch (clientAddr.ss_family) {
-				case PF_INET:
-					if (inet_ntop(clientAddr.ss_family,
-								&((struct sockaddr_in *)&clientAddr)->sin_addr,
-								clientAddrString, INET6_ADDRSTRLEN) == NULL) {
-						fprintf(getLog(), "WARNING: Could not convert IPv4 address to string: %s\n", strerror(errno));
-						clientAddrString[0] = '\0';
-					} else {
-						fprintf(getLog(), "INFO: Connected to %s\n", clientAddrString);
-					}
-					break;
-				case PF_INET6:
-					if (inet_ntop(clientAddr.ss_family,
-								&((struct sockaddr_in6 *)&clientAddr)->sin6_addr,
-								clientAddrString, INET6_ADDRSTRLEN) == NULL) {
-						fprintf(getLog(), "WARNING: Could not convert IPv6 address to string: %s\n", strerror(errno));
-						clientAddrString[0] = '\0';
-					} else {
-						fprintf(getLog(), "INFO: Connected to %s\n", clientAddrString);
-					}
-					break;
-				default:
-					//fprintf(stderr, "warning: unexpected address family (%d)\n",
-					//	clientAddr.ss_family);
-					//clientAddrString = "bad addr";
-					break;
-			}
-			if (initFileTransfer(cd, info)){
-				long long int left = info->fileLen;
-				fprintf(getLog(), "INFO: Client wants to send a file with %lli bytes\n", info->fileLen);
-				getCurrentTime(t);
-
-				strcat(folder, (*info).filename);
-				fprintf(getLog(), "INFO: Saving file to: %s\n", folder);
-				//$$printf("folder is %s\n", folder);
-				//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
-				//uint8_t * ptr = fileContents; // set pointer to start of fileContents
-
-				// Check if we have the pad, if we have enough room
-				long long int padSize = 0;
-				long long int padOffset = 0;
-
-				getOffsetAndSize(info->padID, &padOffset, &padSize);
-
-				if (padSize == 0) {
-					// if pad size is zero, then the pad is not valid!
-					sendError(cd, PAD_INVALID);
-					fprintf(getLog(), "ERROR: Pad requested is not valid, ending connection.\n");
-					close(cd);
-					break;
-					// Not enough room in pad
-				} else if (info->fileLen > (padSize - padOffset)) {
-					sendError(cd, NO_ROOM);
-					fprintf(getLog(), "ERROR: Not enough padd offset for file.  Needed: %lli | Have: %lli\n", info->fileLen, padOffset);
-					close(cd);
-					break;
-				}
-
-				char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
-				memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
-				snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
-
-
-
-				sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
-				pthread_mutex_lock(&mutexlock);
-				connectedToDisplay(ta->box, clientAddrString, info->filename);
-				refresh();
-				pthread_mutex_unlock(&mutexlock);
-				int iterations = info->fileLen/MAXLEN;
-				iterations += 1;
-				//iterations == 0 ? iterations = 1 : iterations;
-				while(!done){ // accepting a single file loop
-
-					//Determines how many bytes we need to receive
-					//Either the Max packet length, or whatever is 
-					//remaining at the end of the file
-					int get;
-					//left = info->fileLen - (ptr - fileContents);
-					//$$printf("\n value of left is %lli\n", left);
-					if (left < MAXLEN + 1){
-						get = left;
-					}
-					else {
-						get = MAXLEN;
-					}
-
-					//Send an acknowledgement so the client knows when it should send data
-					//sendAll(cd, &ack, sizeof(ack));
-
-					//If we are done receiving, get the 'D' or 'F'
-					if (get == 0){
-						int didRecv = recv(cd, packet, 1, 0);
-						if (didRecv == -1){
-							fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
-							sendError(cd, UNSPEC_ERROR);
-							close(cd);
-							pthread_exit(NULL);
-						}
-					}
-					//Otherwise, recv as much as we need
-					else {
-						int didRecv = recvAll(cd, get + 1, packet);
-						if (didRecv == -1){
-							fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
-
-							sendError(cd, UNSPEC_ERROR);
-							close(cd);
-							pthread_exit(NULL);
-						}
-						if (didRecv != get + 1){
-							fprintf(getLog(), "ERROR: Receive unexpected amount of data, ending connection: %s\n", strerror(errno));
-							sendError(cd, UNSPEC_ERROR);
-							close(cd);
-							pthread_exit(NULL);
-						}
-					}
-
-					//printByteArray(packet);
-
-					//if we receive the 'D'
-					if(packet[0] == (uint8_t) 'D'){
-						//DONE;
-						done = 1;
-						break;
-					}
-					//if we receive another packet
-					else if (packet[0] == (uint8_t) 'F'){
-						serverCrypt(packet, 1, info->padID, padOffset, get); 				
-						padOffset += get;
-						setOffset(info->padID, padOffset);
-						
-						//copy the data from the packet into the fileContents
-						//And then increment the pointer
-						writeToFile(folder, packet + 1, get);
-						pthread_mutex_lock(&mutexlock);
-						progressBar(&(ta->box), info->fileLen/MAXLEN);
-						refresh();
-						pthread_mutex_unlock(&mutexlock);
-
-						//memcpy(ptr, packet + 1, get);
-						left = left - get;//strlen((char*)packet+1);
-						//ptr += get;
-					}
-					else {
-						fprintf(getLog(), "ERROR: Received erroneous data!\n");
-						close(cd);
-						return NULL;
-						//$$printf("%s\n", packet);
-					}
-					memset(packet, 0, sizeof(packet));
-				}
-			} else{
-				free(info);
-				break;
-			}
-
-			if (done) {
-				close(cd);
-				break;
-			}
-			free(info);
-			//free(fileContents);
-		}
-		if (k == -1){ //check return value of write to file
-			close(cd);
-			fprintf(getLog(), "ERROR: Write to File failed!\n");
-			pthread_exit(NULL);
-		}
+  threadArgs * ta = (threadArgs *) arg;
+  int done = 0;
+  int k = 0;
+  int sd = ta->sockfd;
+  uint8_t packet[MAXLEN + 1];
+  memset(packet, 0 , MAXLEN + 1);
+  uint8_t ack = 'A';
+  struct sockaddr_storage clientAddr;
+  char clientAddrString[INET6_ADDRSTRLEN] = "";
+  uint8_t * fileContents; //+1 to allow for null term
+  
+  //TODO: No magic numbers
+  char folder[100] = "./serverfiles/";
+  //char * dir = folder;
+  char t[100]; //time string
+  struct stat st = {0};
+  
+  //printf("value of me is %u\n", (unsigned int) pthread_self()); //check thread id			
+  while (TRUE){
+    pthread_mutex_lock(&mutexlock);
+    displayWaiting(ta->box);
+    pthread_mutex_unlock(&mutexlock);
+    int cd = acceptCon(sd, &clientAddr); //wait for a client to connect
+    char address[100];
+    //getClientAddr(clientAddr, address);
+    
+    getCurrentTime(t);
+    
+    // TODO: Use strncat                                                                    
+    strcat(folder, t);
+    // TODO: Create serverfiles if DNE
+    if (stat(folder, &st) == -1)
+      mkdir(folder, 0700);
+    strcat(folder, "/");
+    
+    switch (clientAddr.ss_family) {
+      case PF_INET:
+	if (inet_ntop(clientAddr.ss_family,
+		      &((struct sockaddr_in *)&clientAddr)->sin_addr,
+		      clientAddrString, INET6_ADDRSTRLEN) == NULL) {
+	  fprintf(getLog(), "WARNING: Could not convert IPv4 address to string: %s\n", strerror(errno));
+	  clientAddrString[0] = '\0';
+	} else {
+	  fprintf(getLog(), "INFO: Connected to %s\n", clientAddrString);
 	}
-	return NULL;
+	break;
+      case PF_INET6:
+	if (inet_ntop(clientAddr.ss_family,
+		      &((struct sockaddr_in6 *)&clientAddr)->sin6_addr,
+		      clientAddrString, INET6_ADDRSTRLEN) == NULL) {
+	  fprintf(getLog(), "WARNING: Could not convert IPv6 address to string: %s\n", strerror(errno));
+	  clientAddrString[0] = '\0';
+	} else {
+	  fprintf(getLog(), "INFO: Connected to %s\n", clientAddrString);
+	}
+	break;
+      default:
+	//fprintf(stderr, "warning: unexpected address family (%d)\n",
+	//	clientAddr.ss_family);
+	//clientAddrString = "bad addr";
+	break;
+      }
+    while (cd) { // full file transfer loop, allows for multiple filetrans
+      fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
+      if (info == NULL) {
+	fprintf(getLog(), "ERROR: Memory allocation failure: %s\n", strerror(errno));
+	sendError(cd, UNSPEC_ERROR);
+	closeProgram(true, true);
+      }
+      
+      
+      if (initFileTransfer(cd, info)){
+	long long int left = info->fileLen;
+	fprintf(getLog(), "INFO: Client wants to send a file with %lli bytes\n", info->fileLen);
+	getCurrentTime(t);
+	
+	strcat(folder, (*info).filename);
+	fprintf(getLog(), "INFO: Saving file to: %s\n", folder);
+	//$$printf("folder is %s\n", folder);
+	//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
+	//uint8_t * ptr = fileContents; // set pointer to start of fileContents
+	
+	// Check if we have the pad, if we have enough room
+	long long int padSize = 0;
+	long long int padOffset = 0;
+	
+	getOffsetAndSize(info->padID, &padOffset, &padSize);
+	
+	if (padSize == 0) {
+	  // if pad size is zero, then the pad is not valid!
+	  sendError(cd, PAD_INVALID);
+	  fprintf(getLog(), "ERROR: Pad requested is not valid, ending connection.\n");
+	  close(cd);
+	  break;
+	  // Not enough room in pad
+	} else if (info->fileLen > (padSize - padOffset)) {
+	  sendError(cd, NO_ROOM);
+	  fprintf(getLog(), "ERROR: Not enough padd offset for file.  Needed: %lli | Have: %lli\n", info->fileLen, padOffset);
+	  close(cd);
+	  break;
+	}
+	
+	char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
+	memset(buffer, 0, MAX_FILE_LENGTH_AS_STRING + 1);
+	snprintf(buffer, MAX_FILE_LENGTH_AS_STRING, "T%lli", padOffset);
+	
+	
+	
+	sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + 1);
+	pthread_mutex_lock(&mutexlock);
+	clearBox(ta->box);
+	connectedToDisplay(ta->box, clientAddrString, info->filename);
+	refresh();
+	pthread_mutex_unlock(&mutexlock);
+	int iterations = info->fileLen/MAXLEN;
+	iterations += 1;
+	//iterations == 0 ? iterations = 1 : iterations;
+	//for (int i = 0; i < iterations; i++){
+	while(!done){ // accepting a single file loop
+	  
+	  //Determines how many bytes we need to receive
+	  //Either the Max packet length, or whatever is 
+	  //remaining at the end of the file
+	  int get;
+	  //left = info->fileLen - (ptr - fileContents);
+	  //$$printf("\n value of left is %lli\n", left);
+	 
+	  if (left < MAXLEN + 1){
+	    get = left;
+	  }
+	  else {
+	    get = MAXLEN;
+	  }
+	  if (left == 0){
+	    /* memset(folder, 0, 100); */
+	    /* char folder[100] = "./serverfiles/"; */
+	    /* strcat(folder, t); */
+	    /* strcat(folder, "/"); */
+	    break;
+	  }
+	  //Send an acknowledgement so the client knows when it should send data
+	  //sendAll(cd, &ack, sizeof(ack));
+	  
+	  //If we are done receiving, get the 'D' or 'F'
+	  if (get == 0){
+	    int didRecv = recv(cd, packet, 1, 0);
+	    if (didRecv == -1){
+	      fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
+	      sendError(cd, UNSPEC_ERROR);
+	      close(cd);
+	      pthread_exit(NULL);
+	    }
+	  }
+	  //Otherwise, recv as much as we need
+	  else {
+	    int didRecv = recvAll(cd, get + 1, packet);
+	    if (didRecv == -1){
+	      fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
+	      
+	      sendError(cd, UNSPEC_ERROR);
+	      close(cd);
+	      pthread_exit(NULL);
+	    }
+	    if (didRecv != get + 1){
+	      fprintf(getLog(), "ERROR: Receive unexpected amount of data, ending connection: %s\n", strerror(errno));
+	      sendError(cd, UNSPEC_ERROR);
+	      close(cd);
+	      pthread_exit(NULL);
+	    }
+	  }
+	  
+	  //printByteArray(packet);
+	  
+	  //if we receive the 'D'
+	  if(packet[0] == (uint8_t) 'D'){
+	    //DONE;
+	    done = 1;
+	    break;
+					}
+	  //if we receive another packet
+	  else if (packet[0] == (uint8_t) 'F'){
+	    serverCrypt(packet, 1, info->padID, padOffset, get); 				
+	    padOffset += get;
+	    setOffset(info->padID, padOffset);
+	    
+	    //copy the data from the packet into the fileContents
+	    //And then increment the pointer
+	    writeToFile(folder, packet + 1, get);
+	    pthread_mutex_lock(&mutexlock);
+	    progressBar(&(ta->box), info->fileLen/MAXLEN);
+	    refresh();
+	    pthread_mutex_unlock(&mutexlock);
+	    
+	    //memcpy(ptr, packet + 1, get);
+	    left = left - get;//strlen((char*)packet+1);
+	    //ptr += get;
+	  }
+	  else {
+	    fprintf(getLog(), "ERROR: Received erroneous data!\n");
+	    close(cd);
+	    return NULL;
+	    //$$printf("%s\n", packet);
+	  }
+	  memset(packet, 0, sizeof(packet));
+	}  
+	} else{
+	free(info);
+	break;
+      }
+      
+      if (done) {
+	close(cd);
+	break;
+      }
+      free(info);
+      //free(fileContents);
+    }
+    if (k == -1){ //check return value of write to file
+      close(cd);
+      fprintf(getLog(), "ERROR: Write to File failed!\n");
+      pthread_exit(NULL);
+    }
+  }
+  return NULL;
 }
 
 void inputHandler(int s) {
-	running = 0;
+  running = 0;
 }
 int main(int argc, char* argv[]) {
-	int opt, sd, i;
-	char *port = DEFAULT_PORT;
-	pthread_t tid[MAX_THREAD];
-
-	threadArgs args[MAX_THREAD];
-
-	while ((opt = getopt(argc, argv, "hp:")) != -1) {
-
-		switch(opt) {
-			/* Reference used from www.gnu.org/software/libc/manual/html_node/Example-of                                   
-			   _Getopt.html */
-
-			case 'h':
-				printUsage(argv[0]);
-				exit(0);
-				break;
-			case 'p':
-				port = optarg;
-				break;
-			default:
+  int opt, sd, i;
+  char *port = DEFAULT_PORT;
+  pthread_t tid[MAX_THREAD];
+  
+  threadArgs args[MAX_THREAD];
+  
+  while ((opt = getopt(argc, argv, "hp:")) != -1) {
+    
+    switch(opt) {
+      /* Reference used from www.gnu.org/software/libc/manual/html_node/Example-of                                   
+	 _Getopt.html */
+      
+    case 'h':
+      printUsage(argv[0]);
+      exit(0);
+      break;
+    case 'p':
+      port = optarg;
+      break;
+    default:
 				printUsage(argv[0]);
 				exit(0);
 		}
@@ -472,25 +484,25 @@ int main(int argc, char* argv[]) {
 	Box boxes[MAXBOXES];
 	int y = 2;
 	for (int i = 0; i< MAXBOXES; i+=2){
-		Box box1 = {.boxNo = i, .progress = 0, .state = 0,
-			.row = y,
-			.column = COLUMN1};
-		Box box2 = {.boxNo = i+1, .progress = 0, .state = 0,
-			.row = y,
-			.column = COLUMN2};
-		boxes[i] = box1;
-		boxes[i+1] = box2;
-		y += HEIGHT+1;
+	  Box box1 = {.boxNo = i, .progress = 0, .state = 0,
+		      .row = y,
+		      .column = COLUMN1};
+	  Box box2 = {.boxNo = i+1, .progress = 0, .state = 0,
+		      .row = y,
+		      .column = COLUMN2};
+	  boxes[i] = box1;
+	  boxes[i+1] = box2;
+	  y += HEIGHT+1;
 	}
 	for (int i = 0; i < MAXBOXES; i++)
 		drawBox(boxes[i]);
 	refresh();
-
+	
 	sd = getSocket(port); //This should be in netCode.h
 	pthread_mutex_init(&mutexlock, NULL);
 	for (i = 0; i < MAX_THREAD; i++) { //create threads
-		args[i].sockfd = sd;
-		args[i].box = boxes[i];
+	  args[i].sockfd = sd;
+	  args[i].box = boxes[i];
 		pthread_create(&tid[i], NULL, worker, &args[i]);
 
 	}
