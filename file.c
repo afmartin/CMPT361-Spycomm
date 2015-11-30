@@ -53,7 +53,6 @@ uint8_t ** getFileArray(FILE* file, unsigned long fileSize) {
 }
 
 int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
-  int k;
   uint8_t uint8Chr;
   FILE *fp;
 
