@@ -71,8 +71,8 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   for (int i = 0; i < packetLen; i++) { //iterate through array
     //for (int ii = 0; ii < MAX_PACKET_LEN; ii++){
     uint8Chr = byteArray[i];
-    if (uint8Chr == 0) 
-      break;
+    /* if (uint8Chr == 0)  */
+    /*   break; */
     unsigned char c = (unsigned char) uint8Chr; 
     fwrite(&c, 1, sizeof(c), fp); //write character to file
   }

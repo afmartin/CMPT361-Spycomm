@@ -50,7 +50,8 @@ void progressBar(Box * box, long iterations){
     
   }
   else if (box->progress % ((iterations / MAXBAR)) == 0 && 
-	   box->progress <= ((iterations / MAXBAR)) * MAXBAR){
+	   box->progress <= ((iterations / MAXBAR)) * MAXBAR &&
+	   box->percentage <= 100.0){
     attron(A_STANDOUT);
     mvaddch(box->row+4, box->position++, ' ');
     attroff(A_STANDOUT);
@@ -60,7 +61,7 @@ void progressBar(Box * box, long iterations){
     refresh();
   }
   
-  if (box->progress == iterations){
+  if (box->progress == iterations || box->percentage == 100.0){
     box->progress = 0;
     box->percentage = 0.0;
     box->state = 0;
