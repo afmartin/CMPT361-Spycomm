@@ -300,7 +300,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	}
 	printf("We are authenticated!\n");
 	printf("Trasfering........\n\n");
-	return offset;
+	return offset + AUTHENTICATION_LENGTH;
 }
 
 void sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
