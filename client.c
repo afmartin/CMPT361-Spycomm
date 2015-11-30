@@ -60,7 +60,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	while((opt = getopt(argc, argv, OPTSTRING)) != -1){
 		switch (opt){
 			case 'h':
-				printf(USAGE);
+				fprintf(stdout, USAGE);
 				exit(0);
 				break;
 			case 'c':
@@ -313,7 +313,8 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 	snprintf(fileLenAsString, MAX_FILE_LENGTH_AS_STRING, "%lli", fileSize);
 
 	if(fileSize == 0){
-		printf("File is empty!");
+		fprintf(stdout, "File is empty!");
+		return;
 	}	
 	
 	//Sends the initialization data and recieved the offset to use
@@ -379,9 +380,9 @@ int main (int argc, char * argv[]){
 
 	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
 
-	printf("\n\n");
-	printf("Initiating file transfer... \n");
-	printf("Connecting using the Legendary File Transfer Protocol\n");
+	fprintf(stdout, "\n\n");
+	fprintf(stdout, "Initiating file transfer... \n");
+	fprintf(stdout, "Connecting using the Legendary File Transfer Protocol\n");
 	//Attempts to grab a new socket
 	int sock = getSocket(serverInfo);
 	int check = connectTo(sock, serverInfo);
@@ -389,14 +390,14 @@ int main (int argc, char * argv[]){
 		fprintf(getLog(), "ERROR: Cannot connect to server!\n");
 		closeProgram(true, false);
 	}
-	printf("Connected to remote host!\n");
-	printf("Initiating secure file transfer...\n");
+	fprintf(stdout, "Connected to remote host!\n");
+	fprintf(stdout, "Initiating secure file transfer...\n");
 	int pos = 0;
 	for(int i = 0; i < opts->fileNum; i++){
 		char fileToSend[MAX_PATH_LEN];
 		strncpy(fileToSend, &(opts->filePath[pos]), MAX_PATH_LEN);
 
-		printf("\nSending: %s\n", fileToSend);
+		fprintf(stdout, "\nSending: %s\n", fileToSend);
 
 		sendFile(opts->address, opts->ports, fileToSend, opts->padPath, sock);
 
