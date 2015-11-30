@@ -23,8 +23,6 @@
 #include "crypt.h"
 #include "log.h"
 
-#define AUTHENTICATION_LENGTH 16
-
 #define OPTSTRING "hc:p:o:"
 
 #define USAGE "USAGE: %s [-h] -c \"SERVERADDRESS\" -p \"PORT\" -o \"PATH_TO_OTP\" filenames...\n", argv[0]
@@ -146,6 +144,7 @@ int getSocket (struct addrinfo * info){
 	return sock;
 }
 
+//Parses error codes then exits
 void printErrorThenExit(uint8_t errorCode){
 	switch (errorCode){
 		case NO_ROOM:
@@ -173,7 +172,7 @@ void printErrorThenExit(uint8_t errorCode){
 			closeProgram(true, false);
 			break;
 		default:
-			fprintf(getLog(), "WARNING: UNKNOWN ERROR CODE RECIEVED");
+			fprintf(getLog(), "WARNING: UNKNOWN ERROR CODE RECIEVED\n");
 			closeProgram(true, false);
 			break;
 	}
@@ -231,7 +230,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	//to ensure the server is ready to receive
 	uint8_t wait[1 + MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH];
 	int checkRet;
-	checkRet = recv(sock, wait, sizeof(wait), 0);
+	checkRet = recv(sock, wait, 1 + MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH, 0);
 	if (checkRet == -1){
 		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
 		closeProgram(true, false);
@@ -242,6 +241,8 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 		}
 		else {
 			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but recieved '%c'\n", wait[0]);
+			printf("%s\n", wait);
+			closeProgram(true, false);
 		}
 	}
 	
@@ -254,24 +255,35 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 		}
 	}
 	
+	printf("Received authentication challenge\n");
+	
+	
+	//get the offset from the server packet
 	char offsetString[MAX_FILE_LENGTH_AS_STRING];
 	memcpy(offsetString, wait + 1, MAX_FILE_LENGTH_AS_STRING);
 	long long int offset = atoll(offsetString);
 	
+	//create a pointer to the authentication portion
 	uint8_t * auth = wait + 1 + MAX_FILE_LENGTH_AS_STRING;
 	
+	//Decrpyt the authentication data
+	printf("Decrypting now........\n");
 	clientCrypt(auth, 0, padPath, offset, AUTHENTICATION_LENGTH);
 	
+	//create a packet to send back to the server
 	uint8_t authenticationString[1 + AUTHENTICATION_LENGTH];
 	authenticationString[0] = 'T';
 	memcpy(&authenticationString[1], auth, AUTHENTICATION_LENGTH);
 	
+	//Send the challenge response
+	printf("Sending challenge response...\n");
 	sent = sendAll(sock, (uint8_t *) authenticationString, AUTHENTICATION_LENGTH + 1);
 	if (sent == -1){
 		fprintf(getLog(), "ERROR: Sending data failed: %s\n", strerror(errno));
 		closeProgram(true, false);
 	}
 	
+	//Wait for either an acknowledgement or Error
 	checkRet = recv(sock, wait, sizeof(wait), 0);
 	if (checkRet == -1){
 		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
@@ -283,11 +295,11 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 		}
 		else {
 			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but recieved '%c'\n", wait[0]);
+			closeProgram(true, false);
 		}
 	}
-	
-	
-	//if it did all send, return true
+	printf("We are authenticated!\n");
+	printf("Trasfering........\n\n");
 	return offset;
 }
 
@@ -303,7 +315,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 	if(fileSize == 0){
 		printf("File is empty!");
 	}	
-
+	
 	//Sends the initialization data and recieved the offset to use
 	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath);
 	if (offset == -1){
@@ -367,6 +379,9 @@ int main (int argc, char * argv[]){
 
 	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
 
+	printf("\n\n");
+	printf("Initiating file transfer... \n");
+	printf("Connecting using the Legendary File Transfer Protocol\n");
 	//Attempts to grab a new socket
 	int sock = getSocket(serverInfo);
 	int check = connectTo(sock, serverInfo);
@@ -374,7 +389,8 @@ int main (int argc, char * argv[]){
 		fprintf(getLog(), "ERROR: Cannot connect to server!\n");
 		closeProgram(true, false);
 	}
-
+	printf("Connected to remote host!\n");
+	printf("Initiating secure file transfer...\n");
 	int pos = 0;
 	for(int i = 0; i < opts->fileNum; i++){
 		char fileToSend[MAX_PATH_LEN];
