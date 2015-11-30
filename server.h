@@ -21,7 +21,7 @@ int getSocket(char* port);
 
 int getPadOffset(int padID);
 
-int initFileTransfer(int cd, fileInfo *info);
+int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long int * padOffset);
 
 void* worker(void * arg);
 
