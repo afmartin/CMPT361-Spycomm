@@ -38,7 +38,7 @@ void closeProgram(bool crashed, bool ncurses) {
 	fclose(log);
 
 	if (crashed) {
-		fprintf(stdout, "Program has terminated prematurely.  View %s for details.", filename);
+		fprintf(stdout, "Program has terminated prematurely.  View %s for details.\n", filename);
 	}
 
 	// if crashed return 1, if not return 0

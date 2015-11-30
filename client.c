@@ -14,7 +14,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <arpa/inet.h>
+#include <arpa/inet.h> 
 #include <errno.h>
 
 #include "file.h"
@@ -267,22 +267,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 	}
 	printf("\nCompleted\n");
 	close(fd);
-
-
-	//Send a 'D' to indicate file transfer completion
-	uint8_t done = 'D';	
-	sendAll(sock, &done, sizeof(uint8_t));
-
-
-	//Wait for an acknowledgement before closing the connection
-	checkRet = recv(sock, wait, sizeof(uint8_t), 0);
-	if (checkRet == -1 || wait[0] != (uint8_t) 'A'){
-		fprintf(getLog(), "ERROR: Expected Acknowledgement from server, received something else.\n");	
-		closeProgram(true, false);
-	}
-
 	//freeaddrinfo(serverInfo);
-
 }
 
 int main (int argc, char * argv[]){
@@ -317,6 +302,8 @@ int main (int argc, char * argv[]){
 
 		pos += strlen(fileToSend) + 1;
 	}
+	uint8_t d = 'D';
+	int sent = sendAll(sock, &d, sizeof(d));
 
 	free(opts);
 

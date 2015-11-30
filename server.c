@@ -313,15 +313,13 @@ void* worker(void * arg) { //this is the function that threads will call
 					sendError(cd, PAD_INVALID);
 					fprintf(getLog(), "ERROR: Pad requested is not valid, ending connection.\n");
 					close(cd);
-					// TODO: Make sure this doesn't kill thread. 
-					return NULL;
+					break;
 					// Not enough room in pad
 				} else if (info->fileLen > (padSize - padOffset)) {
 					sendError(cd, NO_ROOM);
 					fprintf(getLog(), "ERROR: Not enough padd offset for file.  Needed: %lli | Have: %lli\n", info->fileLen, padOffset);
 					close(cd);
-					// TODO: Make sure this doesn't kill thread. 
-					return NULL;
+					break;
 				}
 
 				char buffer[MAX_FILE_LENGTH_AS_STRING + 1];
@@ -356,7 +354,7 @@ void* worker(void * arg) { //this is the function that threads will call
 					//Send an acknowledgement so the client knows when it should send data
 					//sendAll(cd, &ack, sizeof(ack));
 
-					//If we are done receiving, get the 'D'
+					//If we are done receiving, get the 'D' or 'F'
 					if (get == 0){
 						int didRecv = recv(cd, packet, 1, 0);
 						if (didRecv == -1){
@@ -389,7 +387,6 @@ void* worker(void * arg) { //this is the function that threads will call
 					//if we receive the 'D'
 					if(packet[0] == (uint8_t) 'D'){
 						//DONE;
-						sendAll(cd, &ack, sizeof(ack));
 						done = 1;
 						break;
 					}
