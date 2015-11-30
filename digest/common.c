@@ -26,30 +26,3 @@
 #if CHAR_BIT != 8
 #error This library is not compatible with non-octet-byte machines.
 #endif
-
-/*
- * Tests if the given bytes are in little-endian or big-endian order.
- * Returns 1 and prints the appropriate compiler flag if they are; otherwise,
- * returns 0.
- */
-static int testEndian(byte_t *b, size_t len, int spaceBefore);
-
-static int testEndian(byte_t *b, size_t len, int spaceBefore)
-{
-  size_t i;
-  int isLE, isBE;
-
-  isLE = isBE = 1;
-  for (i = 0; i < len; i++) {
-    if (b[i] != (byte_t)(i + 1))
-      isBE = 0;
-    if (b[i] != (byte_t)(len - i))
-      isLE = 0;
-  }
-
-  if (isLE)
-    printf("%s-DLITTLE_ENDIAN_%d", (spaceBefore ? " " : ""), (int)(len*8));
-  else if (isBE)
-    printf("%s-DBIG_ENDIAN_%d", (spaceBefore ? " " : ""), (int)(len*8));
-  return (isLE | isBE);
-}
