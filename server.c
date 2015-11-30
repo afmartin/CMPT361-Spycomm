@@ -31,6 +31,7 @@ Filename: server.c Description:
 #include "screen.h"
 #include "log.h"
 
+#define MAX_FOLDER_LEN 128
 #define DONE mvprintw(1, 1, "done\n"); refresh()
 #define MAX_CONNECTIONS 10
 #define DEFAULT_PORT "36115" // This can change and should be in our protocol
@@ -307,7 +308,8 @@ void* worker(void * arg) { //this is the function that threads will call
     //uint8_t * fileContents; //+1 to allow for null term
     
     //TODO: No magic numbers
-    char folder[100] = "./serverfiles/";
+    char folder[MAX_FOLDER_LEN] = "./serverfiles/";
+	int baseFolderLen = strlen(folder);
     //char * dir = folder;
     char t[100]; //time string
     struct stat st = {0};
@@ -372,7 +374,7 @@ void* worker(void * arg) { //this is the function that threads will call
 				fprintf(getLog(), "INFO: Client wants to send a file with %lli bytes\n", info->fileLen);
 				getCurrentTime(t);
 				
-				memset(folder + pathBase, 0, strlen(folder));
+				memset(folder + pathBase, 0, MAX_FOLDER_LEN - baseFolderLen);
 				strcat(folder, (*info).filename);
 				fprintf(getLog(), "INFO: Saving file to: %s\n", folder);
 				//$$printf("folder is %s\n", folder);
