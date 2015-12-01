@@ -548,6 +548,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	initLog(SERVER_LOG);
+	loadOffsets();
 	initscr();
 	noecho();
 	Box boxes[MAXBOXES];

@@ -274,7 +274,7 @@ void setOffset(char * digest, long long int offset) {
 
 
 
-void readMap() {
+void loadOffsets() {
 	FILE * f = fopen(MAP_FILENAME, "r");
 	if (f == NULL) {
 		// no file.. get out of here.
