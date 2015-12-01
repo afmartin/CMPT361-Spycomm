@@ -51,6 +51,7 @@ struct _fileInfo {
 	char filename[MAX_FILE_NAME];
 	long long int fileLen;
 	char padID[MD5_STRING_LENGTH];
+	uint8_t checksum[MD5_DIGEST_BYTES]; 
 };
 
 pthread_mutex_t mutexlock;
@@ -168,6 +169,10 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 			if (position == sizeof(info->filename) - 1){
 				break;
 			}
+			if (*ptr == '\\' || *ptr == '/') {
+				memset(temp, 0, sizeof(temp));
+				position = 0;
+			}		
 			temp[position++] = *ptr++;
 		}
 		temp[position] = '\0'; 
@@ -187,7 +192,9 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 				close(cd);
 				return -1;
 			}
+		
 			temp[position++] = *ptr++;
+			
 		}
 		temp[position] = '\0';
 
@@ -208,6 +215,13 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 
 		//Copy the string into the struct
 		strcpy(info->padID, temp);
+
+		// Copy checksum into the struct
+		ptr++;
+		for (int i=0; i<MD5_DIGEST_BYTES; i++) {
+			info->checksum[i] = *ptr;
+			ptr++;
+		}
 
 		//printf("%s -- %lli -- %s\n", info->filename, info->fileLen, info->padID);
 	}
@@ -251,7 +265,7 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 	//Send all the packet
 	int sent = sendAll(cd, (uint8_t *) buffer, MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH + 1);
 	if (sent == -1){
-		fprintf(getLog(), "Error sending challenge!\n");
+		fprintf(getLog(), "ERROR: Error sending challenge!\n");
 		return FALSE;
 	}
 	sleep(1);
@@ -260,11 +274,11 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 	uint8_t received[AUTHENTICATION_LENGTH + 1];
 	int recvRet = recv(cd, received, AUTHENTICATION_LENGTH + 1, 0);
 	if (recvRet == -1){
-		fprintf(getLog(), "Error receiving challenge response!\n");
+		fprintf(getLog(), "ERROR: Error receiving challenge response!\n");
 		return FALSE;
 	}
 	else if (received[0] != 'T'){
-		fprintf(getLog(), "Incorrect response to challenge\n");
+		fprintf(getLog(), "ERROR: Incorrect response to challenge\n");
 		sendError(cd, UNSPEC_ERROR);
 		return FALSE;
 	}
@@ -406,10 +420,15 @@ void* worker(void * arg) { //this is the function that threads will call
 						get = MAXLEN;
 					}
 					if (left == 0){
-						/* memset(folder, 0, 100); */
-						/* char folder[100] = "./serverfiles/"; */
-						/* strcat(folder, t); */
-						/* strcat(folder, "/"); */
+						uint8_t checksum[MD5_DIGEST_BYTES];
+						getMd5DigestFromFile(folder, checksum);
+						if (compareMd5Digest(checksum, info->checksum)) {
+							uint8_t a = 'A';
+							sendAll(cd, &a, 1);	
+						} else {
+							fprintf(getLog(), "WARNING: %s checksum failed... asking client to retry.\n", info->filename);
+							sendError(cd, DATA_INVALID);
+						}
 						break;
 					}
 					//Send an acknowledgement so the client knows when it should send data

@@ -182,17 +182,20 @@ void printErrorThenExit(uint8_t errorCode){
 //MD5 padID, and returns true or false depending on whether it succeeds
 long long int initiateFileTransfer(int sock, char * fileName, char * length, char * padPath){
 	
-	// Compute string representatino of digest.
+	// Compute string representation of digest.
 	uint8_t digest[MD5_DIGEST_BYTES];	
 	getMd5DigestFromFile(padPath, digest);
 	char digestStr[MD5_STRING_LENGTH];
 	convertMd5ToString(digestStr, digest);
+
+	// Compute digest of entire file.
+	uint8_t fileDigest[MD5_DIGEST_BYTES]; 
+	getMd5DigestFromFile(fileName, fileDigest);
 	
 	
 	//Get the length of the initialization packet
-	int initStringLen = sizeof(char) + strlen(fileName) + strlen(length) + strlen(digestStr) + 3;
+	int initStringLen = sizeof(char) + strlen(fileName) + strlen(length) + strlen(digestStr) + MD5_DIGEST_BYTES + 3;
 
-	
 	
 	//Create an array for the packet
 	char initString[initStringLen];
@@ -206,6 +209,8 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	memcpy(position, length, strlen(length) + 1);
 	position += strlen(length) + 1;
 	memcpy(position, digestStr, strlen(digestStr) + 1);
+	position += strlen(digestStr) + 1;
+	memcpy(position, fileDigest, MD5_DIGEST_BYTES);
 
 
 	//Create a int to hold the length of bytes to send
@@ -286,7 +291,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	//Wait for either an acknowledgement or Error
 	checkRet = recv(sock, wait, sizeof(wait), 0);
 	if (checkRet == -1){
-		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
+		fprintf(getLog(), "ERROR: Recieve failed while waiting for an acknowledgement\n");
 		closeProgram(true, false);
 	}
 	else if (wait[0] != 'A'){
@@ -320,7 +325,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 	//Sends the initialization data and recieved the offset to use
 	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath);
 	if (offset == -1){
-		fprintf(getLog(), "Error handshaking: program terminating\n");
+		fprintf(getLog(), "ERROR: Error handshaking: program terminating\n");
 		closeProgram(true, false);
 	}
 
@@ -365,6 +370,49 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 	//freeaddrinfo(serverInfo);
 }
 
+/**
+ * checkServerResponse
+ *
+ * Checks whether or not server received valid data
+ * for file.  If it gets an DATA_INVALID error it returns false,
+ * returns true on A.  If it gets another error (something server
+ * may have sent that might have been ignore) we close connection.
+ *
+ * Args:
+ * int sock - socket descriptor for connection
+ *
+ * Returns:
+ * Bool of whether or not server has valid data received from us. 
+ */
+static bool checkServerResponse(int sock) {
+	// Check for whether the server got all the data properly.
+	uint8_t wait;
+	int checkRet;
+	checkRet = recv(sock, &wait, sizeof(wait), 0);
+	if (checkRet == -1) {
+		fprintf(getLog(), "ERROR: Recv failed: %s\n", strerror(errno));
+		closeProgram(true, false);
+	}
+	if (wait == 'E') {
+		// We need to know error code
+		checkRet = recv(sock, &wait, sizeof(wait), 0);
+		if (checkRet == -1) {
+			fprintf(getLog(), "ERROR: Recv failed: %s\n", strerror(errno));
+			closeProgram(true, false);
+		}
+		if (wait == DATA_INVALID) {
+			return false;	
+		} else {
+			// symptoms of something more serious.  Disconnect
+			fprintf(getLog(), "ERROR: Server quit with error no: %d\n", wait);
+			closeProgram(true, false);
+		}
+	} else if (wait == 'A') {
+		return true;
+	}
+	return false; // to keep compiler happy.
+}
+
 
 
 int main (int argc, char * argv[]){
@@ -400,8 +448,12 @@ int main (int argc, char * argv[]){
 		fprintf(stdout, "\nSending: %s\n", fileToSend);
 
 		sendFile(opts->address, opts->ports, fileToSend, opts->padPath, sock);
-
-		pos += strlen(fileToSend) + 1;
+		if (checkServerResponse(sock)) {
+			pos += strlen(fileToSend) + 1;
+		} else {
+			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");
+			i--; 
+		}
 	}
 	uint8_t d = 'D';
 	sendAll(sock, &d, sizeof(d));
