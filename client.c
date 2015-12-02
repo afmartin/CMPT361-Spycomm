@@ -287,7 +287,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 		}
 	}
 	printf("We are authenticated!\n");
-	printf("Trasfering........\n\n");
+	printf("Transferring........\n\n");
 	return offset + AUTHENTICATION_LENGTH;
 }
 
@@ -361,7 +361,7 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		for (int j = 0; j < (((100 - percent) * barWidth) / 100); j++){
 			printf(" ");
 		}
-		printf("]\n %dB Sent              \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
+		printf("]\n%dB Sent              \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
 	}
 	printf("\n\nCompleted\n");
 	close(fd);
