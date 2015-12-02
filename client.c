@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <arpa/inet.h> 
 #include <errno.h>
+#include <sys/stat.h>
 
 #include "file.h"
 #include "netCode.h"
@@ -290,13 +291,25 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	return offset + AUTHENTICATION_LENGTH;
 }
 
-void sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
+int isAFile(const char * filepath){
+	struct stat path_stat;
+	stat(filepath, &path_stat);
+	return S_ISREG(path_stat.st_mode);
+}
+
+int sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
+
+	if (!isAFile(fileName)){
+		return -1;
+	}
 
 	//Get info about the file to send
 	FILE * fp = fopen(fileName, "r");
 	if (fp == NULL){
-		return;
+		return -1;
 	}
+	
+	
 	int fd = fileno(fp);
 	long long int fileSize = getFileSize(fd);
 	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
@@ -304,7 +317,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 
 	if(fileSize == 0){
 		fprintf(stdout, "File is empty!");
-		return;
+		return -1;
 	}	
 	
 	//Sends the initialization data and recieved the offset to use
@@ -348,10 +361,11 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 		for (int j = 0; j < (((100 - percent) * barWidth) / 100); j++){
 			printf(" ");
 		}
-		printf("] %dB Sent                                                       \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
+		printf("]\n %dB Sent              \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
 	}
 	printf("\nCompleted\n");
 	close(fd);
+	return 1;
 	//freeaddrinfo(serverInfo);
 }
 
@@ -428,8 +442,9 @@ int main (int argc, char * argv[]){
 	for(int i = argc - opts->fileNum; i < argc; i++){
 		fprintf(stdout, "\nSending: %s\n", argv[i]);
 
-		sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
-		if (!checkServerResponse(sock)) {
+		int check = sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
+		if (check == -1) fprintf(stdout, "File was a directory!\n");
+		else if (!checkServerResponse(sock)) {
 			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");
 			i--; 
 		}
