@@ -40,7 +40,6 @@ struct commandLine {
 	char address[IPV6_ADDRLEN];
 	char ports[MAX_PORTS_LEN];
 	char padPath[MAX_PATH_LEN];
-	char filePath[MAX_FILES_LEN];
 	int fileNum;
 };
 
@@ -94,26 +93,9 @@ struct commandLine * getOptions (int argc, char * argv[]){
 		fprintf(stdout, USAGE);
 		exit(1);
 	}
-
-	memset(options->filePath, 0, MAX_FILES_LEN);
-
-	int argvPos = optind;
-	int filePathPos = 0;
-
-	// TODO: Check if files actually exist.  Otherwise ignore them.
-	while (count != 0){
-		if (filePathPos + strlen(argv[argvPos]) + 1 > MAX_FILES_LEN){
-			fprintf(stderr, "ERROR: Too Many files chosen!\n");
-			exit(0);
-		}
-		strncpy(&(options->filePath[filePathPos]), argv[argvPos], MAX_PATH_LEN);
-		filePathPos += strlen(argv[argvPos]) + 1;
-		argvPos++;
-		count--;
-		options->fileNum++;
-	}
-	options->filePath[++filePathPos] = '\0';
-
+	
+	options->fileNum = count;
+	
 	return options;
 }
 
@@ -312,6 +294,9 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 
 	//Get info about the file to send
 	FILE * fp = fopen(fileName, "r");
+	if (fp == NULL){
+		return;
+	}
 	int fd = fileno(fp);
 	long long int fileSize = getFileSize(fd);
 	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
@@ -363,7 +348,7 @@ void sendFile (char * address, char * port, char * fileName, char * padPath, int
 		for (int j = 0; j < (((100 - percent) * barWidth) / 100); j++){
 			printf(" ");
 		}
-		printf("] %dB Sent         \r", (int)((i * MAX_PACKET_LEN) + sent));
+		printf("] %dB Sent                                                       \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
 	}
 	printf("\nCompleted\n");
 	close(fd);
@@ -440,17 +425,11 @@ int main (int argc, char * argv[]){
 	}
 	fprintf(stdout, "Connected to remote host!\n");
 	fprintf(stdout, "Initiating secure file transfer...\n");
-	int pos = 0;
-	for(int i = 0; i < opts->fileNum; i++){
-		char fileToSend[MAX_PATH_LEN];
-		strncpy(fileToSend, &(opts->filePath[pos]), MAX_PATH_LEN);
+	for(int i = argc - opts->fileNum; i < argc; i++){
+		fprintf(stdout, "\nSending: %s\n", argv[i]);
 
-		fprintf(stdout, "\nSending: %s\n", fileToSend);
-
-		sendFile(opts->address, opts->ports, fileToSend, opts->padPath, sock);
-		if (checkServerResponse(sock)) {
-			pos += strlen(fileToSend) + 1;
-		} else {
+		sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
+		if (!checkServerResponse(sock)) {
 			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");
 			i--; 
 		}
