@@ -363,7 +363,7 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		}
 		printf("]\n %dB Sent              \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
 	}
-	printf("\nCompleted\n");
+	printf("\n\nCompleted\n");
 	close(fd);
 	return 1;
 	//freeaddrinfo(serverInfo);
