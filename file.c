@@ -4,7 +4,8 @@ CMPT 361 - Assignment 3
 Group 4: Nick, John, Alex, Kevin
 November 9th, 2015
 Filename: file.c
-Description:
+Description: Contains various functions for writing and recieving
+files that are used in server.c and client.c 
 #############################################################
 */
 
@@ -17,38 +18,41 @@ Description:
 #include <stdlib.h>
 #include <time.h>
 #include "file.h"
-
-//#define DONES printf("done");
-
+#include "log.h"
 
 long long int getFileSize(int fd) {
-  struct stat buf; //init stat structure from sys/stat.h
+  //initialize stat structure from sys/stat.h
+  struct stat buf;
   size_t size;
   
-  fstat(fd, &buf); //call fstat on file descriptor, pass buf struct
-  size = buf.st_size; //get file size from structure
-
+  //call fstat on file descriptor, pass buf struct
+  fstat(fd, &buf);
+  //get file size from st_size member
+  size = buf.st_size; 
+  
   return size;
 }
 
 uint8_t ** getFileArray(FILE* file, unsigned long fileSize) {
-  
+  //calculate number of packets and set to a variable
   int amountOfPackets = fileSize / MAX_PACKET_LEN ;
+  //intialize array of array
   uint8_t ** byteArray;
+
+  //allocate memory for number of indexes, and for each individual index
   byteArray = malloc(sizeof(uint8_t *) * amountOfPackets);
   for (int i = 0; i < amountOfPackets+1; i++)
     byteArray[i] = malloc(MAX_PACKET_LEN);
 
-  //call fread on file
+  //call fread on file, read MAX_PACKET_LEN bytes of data into each index of array
   for(int i = 0; i < amountOfPackets+1; i++){
     size_t read = fread(byteArray[i], 1, MAX_PACKET_LEN, file);
     if (read == 0) {
-      fprintf(stderr, "Error reading file\n");
+      fprintf(getLog(), "ERROR: Error reading from file with descriptor:'%d'\n", fileno(file));
       return NULL;
     }
   }
 
-  //byteArray[newLen+1] = '\0'; //add escape character
   return byteArray;
 }
 
@@ -56,19 +60,17 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   uint8_t uint8Chr;
   FILE *fp;
 
-  //  k = MAX_PACKET_LEN; //calculate how many indexes in array
-  //DONES;
   /* referenced from stackoverflow.com/questions/13002367/write-a-file
      -byte-by-byte-in-c-using-fwrite */
-  //printf("called\n");
-  fp = fopen(filename, "ab+"); //open file to write
+
+  //open file to write
+  fp = fopen(filename, "w+a");
   if (fp == NULL) {
-    fprintf(stderr, "Error opening file '%s'\n", filename);
-    return -1;
+    fprintf(getLog(), "ERROR: Error opening file '%s'\n", filename);
+    return 0;
   }
-  //DONES;
-  for (int i = 0; i < packetLen; i++) { //iterate through array
-    //for (int ii = 0; ii < MAX_PACKET_LEN; ii++){
+  //iterate through array, and write each character to the file
+  for (int i = 0; i < packetLen; i++) { 
     uint8Chr = byteArray[i];
     /* if (uint8Chr == 0)  */
     /*   break; */
@@ -77,14 +79,14 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
   }
   
   fclose(fp);
-  //printf("Closed the file!\n");
   return 1;
 }
 
 void printByteArray(uint8_t * byteArray) {
-
-  //for (int i = 0; i < k+1; i++)
-  for (int i = 0; i < MAX_PACKET_LEN; i++)
+  int i;
+  
+  //iterate through array, printing each character to stdout
+  for (i = 0; i < MAX_PACKET_LEN; i++)
     fprintf(stdout, "%c ", byteArray[i]);
 }
 
@@ -94,34 +96,9 @@ void getCurrentTime(char* timeString) {
   time_t currTime;
   struct tm* timeInfo;
 
+  //set time string
   time (&currTime);
   timeInfo= localtime(&currTime);
   strftime(timeString, 100, "%F:%T", timeInfo);
-  //timeString = asctime(timeInfo);
-  //$$  printf("Current local time and date: %s\n", timeString);
-
 }
 	       
-//main function used to test above functions
-
-/*int main(void) {
-  FILE *fp, *fp2;
-  int fd, size, i, k;
-  uint8_t *array;
-  char filename[] = "server.c";
-  char filename2[] = "asdf.c";
-
-  
-  fp = fopen(filename, "r");
-  fd = fileno(fp);
-  size = getFileSize(fd);
-  k = (size / sizeof(uint8_t));
-  array = (uint8_t*) malloc((size+1)*sizeof(uint8_t));
-  getFileArray(fp, size, array);
-  close(fd);
-  printByteArray(array, size);
-  writeToFile(filename2, array, size);
-  free(array);
-  return 0;
-  }*/ 
-
