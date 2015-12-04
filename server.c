@@ -481,7 +481,7 @@ void* worker(void * arg) { //this is the function that threads will call
 						//And then increment the pointer
 						writeToFile(folder, packet + 1, get);
 						pthread_mutex_lock(&mutexlock);
-						progressBar(&(ta->box), info->fileLen/MAXLEN);
+						progressBar(&(ta->box), iterations);
 						refresh();
 						pthread_mutex_unlock(&mutexlock);
 						
