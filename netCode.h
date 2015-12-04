@@ -1,6 +1,13 @@
 /*
 
-AWESOME HEADER BLOCK
+##########################################################################
+CMPT 361 - Assignment 3
+Group 4: Nick, John, Alex, Kevin
+December 4th, 2015
+Filename: netCode.h
+Description: header file for netCode.c. Contains references to functions
+and several macros used.
+##########################################################################
 
 */
 

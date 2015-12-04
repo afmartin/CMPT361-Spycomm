@@ -1,7 +1,12 @@
-/*
-
-AWESOME HEADER BLOCK
-
+/*                                                                     
+#####################################################################                        
+CMPT 361 - Assignment 3                                                                                 
+Group 4: Nick, John, Alex, Kevin                                                                        
+November 9th, 2015                                                                                      
+Filename: netCode.c                                                             
+Description: Contains various functions for sending and receiving 
+data across a socket                                                           
+#####################################################################          
 */
 
 #include "netCode.h"

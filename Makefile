@@ -38,7 +38,3 @@ log.o: log.c log.h
 
 clean:
 	$(RM) spycommd spycomm *.o digest/*.o
-
-
-screen: screen.c screen.h
-	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
