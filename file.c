@@ -1,5 +1,4 @@
-/*
-#############################################################
+/*j############################################################
 CMPT 361 - Assignment 3
 Group 4: Nick, John, Alex, Kevin
 November 9th, 2015
@@ -64,7 +63,7 @@ int writeToFile(char* filename, uint8_t *byteArray, int packetLen) {
      -byte-by-byte-in-c-using-fwrite */
 
   //open file to write
-  fp = fopen(filename, "w+a");
+  fp = fopen(filename, "a");
   if (fp == NULL) {
     fprintf(getLog(), "ERROR: Error opening file '%s'\n", filename);
     return 0;

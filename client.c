@@ -123,7 +123,6 @@ int getSocket (struct addrinfo * info){
 		closeProgram(true, false);
 	}
 
-	freeaddrinfo(info);
 	return sock;
 }
 

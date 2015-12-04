@@ -292,7 +292,6 @@ void loadOffsets() {
 		if (otp == NULL) {
 			continue; 
 		}
-		fclose(otp);
 		setOffset(digest, offset);
 	}
 	fclose(f);

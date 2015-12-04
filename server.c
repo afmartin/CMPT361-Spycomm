@@ -389,7 +389,7 @@ void* worker(void * arg) { //this is the function that threads will call
 				fprintf(getLog(), "INFO: Client wants to send a file with %lli bytes\n", info->fileLen);
 				getCurrentTime(t);
 				
-				memset(folder + pathBase, 0, MAX_FOLDER_LEN - (pathBase));
+				memset(folder + pathBase, 0, MAX_FOLDER_LEN - baseFolderLen);
 				strcat(folder + pathBase, (*info).filename);
 				fprintf(getLog(), "INFO: Saving file to: %s\n", folder);
 				//$$printf("folder is %s\n", folder);
