@@ -321,6 +321,7 @@ void* worker(void * arg) { //this is the function that threads will call
     char clientAddrString[INET6_ADDRSTRLEN] = "";
     //uint8_t * fileContents; //+1 to allow for null term
     
+	char stacksaver[INET6_ADDRSTRLEN] = "";
     //TODO: No magic numbers
     char folder[MAX_FOLDER_LEN] = "./serverfiles/";
 	int baseFolderLen = strlen(folder);
@@ -388,8 +389,8 @@ void* worker(void * arg) { //this is the function that threads will call
 				fprintf(getLog(), "INFO: Client wants to send a file with %lli bytes\n", info->fileLen);
 				getCurrentTime(t);
 				
-				memset(folder + pathBase, 0, MAX_FOLDER_LEN - baseFolderLen);
-				strcat(folder, (*info).filename);
+				memset(folder + pathBase, 0, MAX_FOLDER_LEN - (pathBase));
+				strcat(folder + pathBase, (*info).filename);
 				fprintf(getLog(), "INFO: Saving file to: %s\n", folder);
 				//$$printf("folder is %s\n", folder);
 				//fileContents = malloc(sizeof(uint8_t) * info->fileLen);
