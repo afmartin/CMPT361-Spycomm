@@ -1,3 +1,6 @@
+/**
+ * NOTE THIS CODE IS NOT USED IN PROJECT
+ */
 typedef struct _TreeNode{
   
   char symbol;

@@ -3,7 +3,7 @@ CMPT 361 - Assignment 3
 Group 4: Nick, John, Alex, Kevin
 November 9th, 2015
 Filename: file.c
-Description: Contains various functions for writing and recieving
+Description: Contains various functions for writing and receiving
 files that are used in server.c and client.c 
 #############################################################
 */
@@ -35,7 +35,7 @@ long long int getFileSize(int fd) {
   struct stat buf;
   size_t size;
   
-  //call fstat on file descriptor, pass buf struct
+  //call fstat on file descriptor, pass buffer struct
   fstat(fd, &buf);
   //get file size from st_size member
   size = buf.st_size; 
@@ -46,7 +46,7 @@ long long int getFileSize(int fd) {
 uint8_t ** getFileArray(FILE* file, unsigned long fileSize) {
   //calculate number of packets and set to a variable
   int amountOfPackets = fileSize / MAX_PACKET_LEN ;
-  //intialize array of array
+  //initialize array of array
   uint8_t ** byteArray;
 
   //allocate memory for number of indexes, and for each individual index

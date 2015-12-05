@@ -406,7 +406,7 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, char
 		return -1;
 	}	
 
-	fprintf(getLog(), "INFO: Sending file: %s of length %sB\n", fileName, fileLenAsString); 
+	fprintf(getLog(), "INFO: Sending file: %s of size %sB\n", fileName, fileLenAsString); 
 	
 	//Sends the initialization data and received the offset to use
 	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath, digestStr);

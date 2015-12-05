@@ -61,7 +61,7 @@ static pthread_mutex_t mutexlock; // A lock to prevent multiple threads from upd
 /**
  * printUsage
  *
- * Prints the usage of the pgram to standard output.
+ * Prints the usage of the program to standard output.
  *
  * Args:
  * char * name - the name of this program
@@ -394,7 +394,7 @@ void getClientAddr(struct sockaddr_storage * clientAddr, char * clientAddrString
 		default:
 			fprintf(stderr, "warning: unexpected address family (%d)\n",
 					clientAddr->ss_family);
-			clientAddrString = "bad addr";
+			clientAddrString = "Unknown Address";
 			break;
 	}
 
@@ -409,7 +409,7 @@ void getClientAddr(struct sockaddr_storage * clientAddr, char * clientAddrString
  * Will only go up to the maximum value of int for unique
  * number appended.
  *
- * Technically it only needs to be at 8, but incase
+ * Technically it only needs to be at 8, but in case
  * the number of threads is greatly expanded in the future.
  *
  * Args:
@@ -485,7 +485,7 @@ void * worker(void * arg) { //this is the function that threads will call
 		strncat(folder, t, MAX_FOLDER_LEN);
 		makeDataFolder(folder);	// makeDataFolder will modify folder.
 		strcat(folder, "/");
-		while (cd) { // full file transfer loop, allows for multiple filetrans
+		while (cd) { // full file transfer loop, allows for multiple file transactions
 			fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
 			if (info == NULL) {
 				fprintf(getLog(), "ERROR: Memory allocation failure: %s\n", strerror(errno));
@@ -556,7 +556,7 @@ void * worker(void * arg) { //this is the function that threads will call
 							pthread_exit(NULL);
 						}
 					}
-					//Otherwise, recv as much as we need
+					//Otherwise, receive as much as we need
 					else {
 						int didRecv = recvAll(cd, get + 1, packet);
 						if (didRecv == -1){
@@ -682,7 +682,7 @@ int main(int argc, char* argv[]) {
 
 	fprintf(getLog(), "INFO: Killing threads...\n");
 	// At this point in time, it appears the program will randomly exit prematurely when exiting threads.
-	// so we're not using closeProgram :(
+	// so we're not using closeProgram 
 	fclose(getLog());
 	endwin();
 	for (i = 0; i < MAX_THREAD; i++) {
