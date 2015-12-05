@@ -1,8 +1,20 @@
 /*
-
-   VERY INSIGHTFUL AND INORMATIVE COMMENT BLOCK GOES HERE
-
-*/	
+#################################################################################
+CMPT 361 - Assignment 3                                                                                                                 
+Group 4: Nick, John, Alex, Kevin
+November 6th, 2015
+Filename: client.c 
+Description: This is a client program implementation 
+of the Legendary File Transfer Protocol documented at
+within an email you should have received with this program.
+As a Spy for the Imperium of Awesome, you will be using this 
+program to securely transfer data you have collected during your
+counter intelligence efforts. You were securely sent a One-Time-Pad
+which you will use with this program to encrypt the data that will be sent.
+Use it wisely. The pad is limited and will eventually be used up. Only
+send the most important data back to HQ. 
+#################################################################################
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -24,19 +36,18 @@
 #include "crypt.h"
 #include "log.h"
 
+//This defines the String used by getopt to determine the command line arguments
 #define OPTSTRING "hc:p:o:"
 
+//This defines the string to be used when printing the usage
 #define USAGE "USAGE: %s [-h] -c \"SERVERADDRESS\" -p \"PORT\" -o \"PATH_TO_OTP\" filenames...\n", argv[0]
 
-#define DONE   printf("Done!\n");
-
+//This defines the name of the client's log file
 #define CLIENT_LOG "spycomm.txt"
 
 //This is a struct to hold the command line strings
-
-// TODO: Be advised that althougth the max file length may be
-// 512 bytes, the user could reference files from subfolders and therefor
-// the length should dynamically be determined.
+//It stores the server address, the port to connect on, 
+//as well as the path to the pad, and the number of files
 struct commandLine {
 	char address[IPV6_ADDRLEN];
 	char ports[MAX_PORTS_LEN];
@@ -44,8 +55,21 @@ struct commandLine {
 	int fileNum;
 };
 
-//Grabs the command line options and places them into their
-//coresponding parts of the commandLine Struct
+
+
+/**
+ * getOptions
+ *
+ * Grabs the command line options and places them into their
+ * coresponding parts of the commandLine Struct
+ *
+ * Args:
+ * int argc: The total number of command line arguments
+ * char * argv : The double pointer of the command line arguments
+ *
+ * Returns:
+ * A commandLine struct containing the commandline options parsed 
+ */
 struct commandLine * getOptions (int argc, char * argv[]){
 	struct commandLine * options = malloc(sizeof(struct commandLine));
 
@@ -55,6 +79,8 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	}
 
 	int opt;
+	//Count holds the number of arguments and is decremented
+	//after a option in parsed
 	int count = argc - 1;
 
 	while((opt = getopt(argc, argv, OPTSTRING)) != -1){
@@ -89,6 +115,8 @@ struct commandLine * getOptions (int argc, char * argv[]){
 		}
 	}
 
+	
+	//if there are no arguements left, then the were no files listed
 	if(count <= 0){
 		fprintf(stderr,"ERROR: No files listed!\n");
 		fprintf(stdout, USAGE);
@@ -100,7 +128,18 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	return options;
 }
 
-//Gets a new socket given an addrinfo struct linkedlist
+/**
+ * getSocket
+ *
+ * Creates a socket ready for a connect call 
+ * given a addrinfo struct
+ *
+ * Args:
+ * struct addrinfo *info: A struct containing the server's connection info
+ *
+ * Returns:
+ * An integer indicating the success or failur
+ */
 int getSocket (struct addrinfo * info){
 
 	struct addrinfo * iter;
@@ -126,7 +165,18 @@ int getSocket (struct addrinfo * info){
 	return sock;
 }
 
-//Parses error codes then exits
+/**
+ * printErrorThenExit
+ *
+ * Parses the received error code then prints the corresponding
+ * error string to the log and terminates
+ *
+ * Args:
+ * uint8_t errorCode: The 8 bytes error code received
+ *
+ * Returns:
+ * 
+ */
 void printErrorThenExit(uint8_t errorCode){
 	switch (errorCode){
 		case NO_ROOM:
@@ -160,11 +210,24 @@ void printErrorThenExit(uint8_t errorCode){
 	}
 }
 
-//Sends the initialization to the server given the socket, filename, length of file,
-//MD5 padID, and returns true or false depending on whether it succeeds
+/**
+ * initiateFileTransfer
+ *
+ * Handles the handshaking process with the server
+ *
+ * Args:
+ * int sock: A socket descriptor with an accepted TCP connected to the server
+ * char * fileName: The string containing the file to send's file name
+ * char * length: The string containing the length of the file as a srting
+ * char * padPath: The string containing the path to the OTP to use
+ *
+ * Returns:
+ * The offset within the OTP we should use for the file transfer as long long int
+ * 
+ */
 long long int initiateFileTransfer(int sock, char * fileName, char * length, char * padPath){
 	
-	// Compute string representation of digest.
+	// Compute string representation of the pad digest.
 	uint8_t digest[MD5_DIGEST_BYTES];	
 	getMd5DigestFromFile(padPath, digest);
 	char digestStr[MD5_STRING_LENGTH];
@@ -219,7 +282,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	int checkRet;
 	checkRet = recv(sock, wait, 1 + MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH, 0);
 	if (checkRet == -1){
-		fprintf(getLog(), "ERROR: Recieve failed while waiting for an acknowledgement\n");
+		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
 		closeProgram(true, false);
 	}
 	else if (wait[0] != 'T'){
@@ -290,12 +353,40 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	return offset + AUTHENTICATION_LENGTH;
 }
 
-int isAFile(const char * filepath){
+
+/**
+ * isAFile
+ *
+ * Check whether a filepath is ia file or directory
+ *
+ * Args:
+ * char * filePath: A string containing a path
+ *
+ * Returns:
+ * A integer (boolean) of whether the path was a file
+ */
+int isAFile(char * filepath){
 	struct stat path_stat;
 	stat(filepath, &path_stat);
 	return S_ISREG(path_stat.st_mode);
 }
 
+
+/**
+ * sendFile
+ *
+ * Handles the entire file transfer
+ *
+ * Args:
+ * char * addrress: The ip address of the server as a string
+ * char * port: The port which the client should connect to
+ * char * fileName: The file name of the file to be  send 
+ * char * padPath: The file path to the one time pad to use
+ * int sock: The socket Descriptor which has been 'connect'ed to the server
+ *
+ * Returns:
+ * A integer (boolean) to indicate the success state
+ */
 int sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
 
 	if (!isAFile(fileName)){
@@ -309,6 +400,9 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 	}
 	
 	
+	
+	//Creates a file descriptor for the file and calculates
+	//the offset and converts to string
 	int fd = fileno(fp);
 	long long int fileSize = getFileSize(fd);
 	char fileLenAsString[MAX_FILE_LENGTH_AS_STRING];
@@ -329,9 +423,9 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 	//Create the buffer for the Packet to be sent
 	uint8_t buffer[MAX_PACKET_LEN + 1];
 
+	//Used for the width of the command line progress bar
 	int barWidth = 60;
 
-	//Send out as many packets as there is data
 	for (int i = 0; i <= fileSize / (MAX_PACKET_LEN); i++){
 		memset(buffer, 0, MAX_PACKET_LEN + 1);
 		buffer[0] = 'F';
@@ -342,11 +436,12 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 			fprintf(getLog(), "ERROR: An Error occured reading %s\n", fileName);
 			closeProgram(true, false);
 		}
-		//		printf("%s\n", padPath);
+		
+		//Encrypt the buffer and update the pad offset
 		clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
 		offset += read;
 
-
+		//Sent all the data and check for errors
 		int sent = sendAll(sock, buffer, read + 1);
 		if (sent == -1){
 			fprintf(getLog(), "ERROR: Failed to send: %s\n", strerror(errno));
@@ -354,8 +449,8 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		}
 
 		int percent = (int)(ceil((float)((i + 1) * 100) / ceil((float)fileSize / (MAX_PACKET_LEN))));
-		//printf("%2d%%  %d =  %d ' '\n", i / (fileSize / (MAX_PACKET_LEN)), ((percent * barWidth) / 100), (((100 - percent) * barWidth) / 100));
 
+		//Prints the command line progress bar
 		printf("%2d%% [", percent);
 		for (int j = 0; j < ((percent * barWidth) / 100); j++){
 			printf("=");
@@ -364,11 +459,11 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 			printf(" ");
 		}
 		printf("]\n%dB Sent              \r\b\r", (int)((i * MAX_PACKET_LEN) + sent));
-	}
+	}	
+	
 	printf("\n\nCompleted\n");
 	close(fd);
 	return 1;
-	//freeaddrinfo(serverInfo);
 }
 
 /**
@@ -423,15 +518,20 @@ int main (int argc, char * argv[]){
 		exit(1);
 	}
 
+	//Grab the command line options and initialize the log
 	struct commandLine * opts = getOptions(argc, argv);
 	initLog(CLIENT_LOG);
 	fprintf(getLog(), "INFO: Command line opts were: %s %s %s\n", opts->address, opts->ports, opts->padPath);
 
+	//Create an addrinfo struct for the server we are connecting to
 	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
 
+	//Flavor text
 	fprintf(stdout, "\n\n");
 	fprintf(stdout, "Initiating file transfer... \n");
 	fprintf(stdout, "Connecting using the Legendary File Transfer Protocol\n");
+	
+	
 	//Attempts to grab a new socket
 	int sock = getSocket(serverInfo);
 	int check = connectTo(sock, serverInfo);
@@ -439,19 +539,23 @@ int main (int argc, char * argv[]){
 		fprintf(getLog(), "ERROR: Cannot connect to server!\n");
 		closeProgram(true, false);
 	}
+	
 	fprintf(stdout, "Connected to remote host!\n");
 	fprintf(stdout, "Initiating secure file transfer...\n");
+	
+	//For each file in argv attempt to send it
 	for(int i = argc - opts->fileNum; i < argc; i++){
 		fprintf(stdout, "\nSending: %s\n", argv[i]);
 
+		//Send a file and check for faileure. Also check the MD5 checksum
 		int check = sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
 		if (check == -1) fprintf(stdout, "File was a directory!\n");
 		else if (!checkServerResponse(sock)) {
-			fprintf(stderr, "Server reported invalid data receiving... trying again...\n");
 			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");
 			i--; 
 		}
 	}
+	//End the connection and free memory
 	uint8_t d = 'D';
 	sendAll(sock, &d, sizeof(d));
 
