@@ -104,7 +104,7 @@ static void writeMap() {
 		closeProgram(true, true);
 	}
 
-	// We don't save file size info incase file size changes.
+	// We don't save file size info in case file size changes.
 	for (int i = 0; i < map_count; i++) { 
 		fprintf(f, "%s:%lli\n", map[i]->digest, map[i]->offset);
 	}
@@ -187,7 +187,7 @@ static void getOtp(char * digest, uint8_t * otp, long long int offset, long long
 	FILE * f = fopen(filename, "rb");
 	int fd = fileno(f);
 	if (f == NULL) {
-		fprintf(getLog(), "ERROR: Could not locate otp to use\n");
+		fprintf(getLog(), "ERROR: Could not locate OTP to use\n");
 		closeProgram(true, true);
 	}
 

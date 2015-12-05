@@ -24,8 +24,10 @@ Description: Functions for computing MD5 digests
  *  char * filename - Filename of file.  Does not check if it exists. 
  *  uint8_t * digest - MUST HAVE LENGTH MD5_DIGEST_BYTES
  *					 - where the digest is written to
+ *	long long int filesize - The what part of the file do we get sum for 
+ *						   - Added because a file may change in between calculating filesize & md5
  */
-void getMd5DigestFromFile(char * filename, uint8_t * digest);
+void getMd5DigestFromFile(char * filename, uint8_t * digest, long long int filesize);
 
 /**
  * getMd5Digest

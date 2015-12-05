@@ -15,7 +15,7 @@ Description: Functions for logging
 
 #include "log.h"
 
-static FILE * log = NULL; // initilized to null incase someone calls getLog prematurely.
+static FILE * log = NULL; // initializes to null in case someone calls getLog prematurely.
 static char * filename;
 
 void initLog(char * f) {

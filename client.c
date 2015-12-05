@@ -61,7 +61,7 @@ struct commandLine {
  * getOptions
  *
  * Grabs the command line options and places them into their
- * coresponding parts of the commandLine Struct
+ * corresponding parts of the commandLine Struct
  *
  * Args:
  * int argc: The total number of command line arguments
@@ -116,7 +116,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
 	}
 
 	
-	//if there are no arguements left, then the were no files listed
+	//if there are no arguments left, then the were no files listed
 	if(count <= 0){
 		fprintf(stderr,"ERROR: No files listed!\n");
 		fprintf(stdout, USAGE);
@@ -138,7 +138,7 @@ struct commandLine * getOptions (int argc, char * argv[]){
  * struct addrinfo *info: A struct containing the server's connection info
  *
  * Returns:
- * An integer indicating the success or failur
+ * An integer indicating the success or failure
  */
 int getSocket (struct addrinfo * info){
 
@@ -173,9 +173,6 @@ int getSocket (struct addrinfo * info){
  *
  * Args:
  * uint8_t errorCode: The 8 bytes error code received
- *
- * Returns:
- * 
  */
 void printErrorThenExit(uint8_t errorCode){
 	switch (errorCode){
@@ -184,7 +181,7 @@ void printErrorThenExit(uint8_t errorCode){
 			closeProgram(true, false);
 			break;
 		case PAD_INVALID:
-			fprintf(getLog(), "ERROR: The server indicates that an invlaid pad was used\n");
+			fprintf(getLog(), "ERROR: The server indicates that an invalid pad was used\n");
 			closeProgram(true, false);
 			break;
 		case DATA_INVALID:
@@ -200,11 +197,11 @@ void printErrorThenExit(uint8_t errorCode){
 			closeProgram(true, false);
 			break;
 		case UNSPEC_ERROR:
-			fprintf(getLog(), "ERROR: The server indicates that unspecified error occured\n");
+			fprintf(getLog(), "ERROR: The server indicates that unspecified error occurred\n");
 			closeProgram(true, false);
 			break;
 		default:
-			fprintf(getLog(), "WARNING: UNKNOWN ERROR CODE RECIEVED\n");
+			fprintf(getLog(), "WARNING: UNKNOWN ERROR CODE RECEIVED\n");
 			closeProgram(true, false);
 			break;
 	}
@@ -218,24 +215,20 @@ void printErrorThenExit(uint8_t errorCode){
  * Args:
  * int sock: A socket descriptor with an accepted TCP connected to the server
  * char * fileName: The string containing the file to send's file name
- * char * length: The string containing the length of the file as a srting
+ * char * length: The string containing the length of the file as a string
  * char * padPath: The string containing the path to the OTP to use
+ * char * digestStr: The string containing the digest of OTP we are using
  *
  * Returns:
  * The offset within the OTP we should use for the file transfer as long long int
  * 
  */
-long long int initiateFileTransfer(int sock, char * fileName, char * length, char * padPath){
+long long int initiateFileTransfer(int sock, char * fileName, char * length, char * padPath, char * digestStr){
 	
-	// Compute string representation of the pad digest.
-	uint8_t digest[MD5_DIGEST_BYTES];	
-	getMd5DigestFromFile(padPath, digest);
-	char digestStr[MD5_STRING_LENGTH];
-	convertMd5ToString(digestStr, digest);
-
+	
 	// Compute digest of entire file.
 	uint8_t fileDigest[MD5_DIGEST_BYTES]; 
-	getMd5DigestFromFile(fileName, fileDigest);
+	getMd5DigestFromFile(fileName, fileDigest, atoll(length));
 	
 	
 	//Get the length of the initialization packet
@@ -282,7 +275,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	int checkRet;
 	checkRet = recv(sock, wait, 1 + MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH, 0);
 	if (checkRet == -1){
-		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
+		fprintf(getLog(), "ERROR: Receive failed while waiting for an acknowledgement\n");
 		closeProgram(true, false);
 	}
 	else if (wait[0] != 'T'){
@@ -290,17 +283,17 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 			printErrorThenExit(wait[1]);
 		}
 		else {
-			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but recieved '%c'\n", wait[0]);
+			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but received '%c'\n", wait[0]);
 			printf("%s\n", wait);
 			closeProgram(true, false);
 		}
 	}
 	
-	//Make sure we recieved all of the handshaking data
+	//Make sure we received all of the handshaking data
 	if (checkRet != sizeof(wait)){
 		int returnValue = recvAll(sock, sizeof(wait) - checkRet, wait + checkRet);
 		if (returnValue == -1){
-			fprintf(getLog(), "ERROR: Recieve failed while waiting for handshake\n");
+			fprintf(getLog(), "ERROR: Receive failed while waiting for handshake\n");
 			closeProgram(true, false);
 		}
 	}
@@ -314,8 +307,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	long long int offset = atoll(offsetString);
 	
 	//create a pointer to the authentication portion
-	uint8_t * auth = wait + 1 + MAX_FILE_LENGTH_AS_STRING;
-	
+	uint8_t * auth = wait + 1 + MAX_FILE_LENGTH_AS_STRING; 
 	//Decrpyt the authentication data
 	printf("Decrypting now........\n");
 	clientCrypt(auth, 0, padPath, offset, AUTHENTICATION_LENGTH);
@@ -336,7 +328,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	//Wait for either an acknowledgement or Error
 	checkRet = recv(sock, wait, sizeof(wait), 0);
 	if (checkRet == -1){
-		fprintf(getLog(), "ERROR: Recieve failed while waiting for an acknowledgement\n");
+		fprintf(getLog(), "ERROR: Receive failed while waiting for an acknowledgement\n");
 		closeProgram(true, false);
 	}
 	else if (wait[0] != 'A'){
@@ -344,7 +336,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 			printErrorThenExit(wait[1]);
 		}
 		else {
-			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but recieved '%c'\n", wait[0]);
+			fprintf(getLog(), "ERROR: Expected a 'T' or 'E' type, but received '%c'\n", wait[0]);
 			closeProgram(true, false);
 		}
 	}
@@ -357,7 +349,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 /**
  * isAFile
  *
- * Check whether a filepath is ia file or directory
+ * Check whether a filepath is a file or directory
  *
  * Args:
  * char * filePath: A string containing a path
@@ -378,16 +370,17 @@ int isAFile(char * filepath){
  * Handles the entire file transfer
  *
  * Args:
- * char * addrress: The ip address of the server as a string
+ * char * address: The IP address of the server as a string
  * char * port: The port which the client should connect to
  * char * fileName: The file name of the file to be  send 
  * char * padPath: The file path to the one time pad to use
+ * char * digestStr: The digest of the OTP to use
  * int sock: The socket Descriptor which has been 'connect'ed to the server
  *
  * Returns:
  * A integer (boolean) to indicate the success state
  */
-int sendFile (char * address, char * port, char * fileName, char * padPath, int sock){
+int sendFile (char * address, char * port, char * fileName, char * padPath, char * digestStr, int sock){
 
 	if (!isAFile(fileName)){
 		return -1;
@@ -412,9 +405,11 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		fprintf(stdout, "File is empty!");
 		return -1;
 	}	
+
+	fprintf(getLog(), "INFO: Sending file: %s of size %sB\n", fileName, fileLenAsString); 
 	
-	//Sends the initialization data and recieved the offset to use
-	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath);
+	//Sends the initialization data and received the offset to use
+	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath, digestStr);
 	if (offset == -1){
 		fprintf(getLog(), "ERROR: Error handshaking: program terminating\n");
 		closeProgram(true, false);
@@ -433,12 +428,12 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		int amountToSend = (fileSize - sentSoFar < MAX_PACKET_LEN ? fileSize - sentSoFar : MAX_PACKET_LEN);
 		size_t read = fread(buffer + 1, 1, amountToSend, fp);
 		if (read == -1){
-			fprintf(getLog(), "ERROR: An Error occured reading %s\n", fileName);
+			fprintf(getLog(), "ERROR: An Error occurred reading %s\n", fileName);
 			closeProgram(true, false);
 		}
 		
 		//Encrypt the buffer and update the pad offset
-		clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
+		clientCrypt(buffer, 1, padPath, offset, read + 1);
 		offset += read;
 
 		//Sent all the data and check for errors
@@ -526,7 +521,7 @@ int main (int argc, char * argv[]){
 	//Create an addrinfo struct for the server we are connecting to
 	struct addrinfo * serverInfo = buildAddrInfo(opts->address, opts->ports);
 
-	//Flavor text
+	//Flavour text
 	fprintf(stdout, "\n\n");
 	fprintf(stdout, "Initiating file transfer... \n");
 	fprintf(stdout, "Connecting using the Legendary File Transfer Protocol\n");
@@ -541,14 +536,22 @@ int main (int argc, char * argv[]){
 	}
 	
 	fprintf(stdout, "Connected to remote host!\n");
-	fprintf(stdout, "Initiating secure file transfer...\n");
 	
+	// Compute string representation of the pad digest.
+	fprintf(stdout, "Calculating pad digest\n");
+	uint8_t digest[MD5_DIGEST_BYTES];	
+	getMd5DigestFromFile(opts->padPath, digest, getFileSizeFromFilename(opts->padPath));
+	char digestStr[MD5_STRING_LENGTH];
+	convertMd5ToString(digestStr, digest);
+
+	fprintf(stdout, "Initiating secure file transfer...\n");
+
 	//For each file in argv attempt to send it
 	for(int i = argc - opts->fileNum; i < argc; i++){
 		fprintf(stdout, "\nSending: %s\n", argv[i]);
 
-		//Send a file and check for faileure. Also check the MD5 checksum
-		int check = sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
+		//Send a file and check for failure. Also check the MD5 checksum
+		int check = sendFile(opts->address, opts->ports, argv[i], opts->padPath, digestStr, sock);
 		if (check == -1) fprintf(stdout, "File was a directory!\n");
 		else if (!checkServerResponse(sock)) {
 			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");

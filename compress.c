@@ -1,3 +1,6 @@
+/**
+ * NOTE THIS CODE IS NOT USED IN PROJECT
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -16,6 +16,7 @@ data across a socket
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "netCode.h"
 #include "log.h"
 
 int recvAll (int sock, int amount, uint8_t * dest){
@@ -25,7 +26,7 @@ int recvAll (int sock, int amount, uint8_t * dest){
 	while (pos - dest < amount){
 		int received = recv(sock, pos, amount - (pos - dest), 0);
 		if (received == -1){
-			fprintf(getLog(), "ERROR: Error when recieving data: %s\n", strerror(errno));
+			fprintf(getLog(), "ERROR: Error when receiving data: %s\n", strerror(errno));
 			return -1;
 		}
 		pos += received;
