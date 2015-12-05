@@ -11,6 +11,7 @@ AWESOME HEADER BLOCK
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "netCode.h"
 #include "log.h"
 
 int recvAll (int sock, int amount, uint8_t * dest){
