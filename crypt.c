@@ -258,7 +258,7 @@ void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  off
 
 void setOffset(char * digest, long long int offset) {
 	// Ref for Mutex from Dr. Nicholas M. Boer's CMPT 360 Lock Lecture Slides
-	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	pthread_mutex_lock (&lock);
 
 	int position = findPosition(digest);

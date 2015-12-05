@@ -219,7 +219,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	int checkRet;
 	checkRet = recv(sock, wait, 1 + MAX_FILE_LENGTH_AS_STRING + AUTHENTICATION_LENGTH, 0);
 	if (checkRet == -1){
-		fprintf(getLog(), "ERROR: Recieve failed while waiting for an aknowledgement\n");
+		fprintf(getLog(), "ERROR: Recieve failed while waiting for an acknowledgement\n");
 		closeProgram(true, false);
 	}
 	else if (wait[0] != 'T'){
@@ -328,14 +328,16 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 
 	//Create the buffer for the Packet to be sent
 	uint8_t buffer[MAX_PACKET_LEN + 1];
-	memset(buffer, 0, MAX_PACKET_LEN + 1);
 
 	int barWidth = 60;
 
 	//Send out as many packets as there is data
 	for (int i = 0; i <= fileSize / (MAX_PACKET_LEN); i++){
+		memset(buffer, 0, MAX_PACKET_LEN + 1);
 		buffer[0] = 'F';
-		size_t read = fread(buffer + 1, 1, MAX_PACKET_LEN, fp);
+		int sentSoFar = i * MAX_PACKET_LEN;
+		int amountToSend = (fileSize - sentSoFar < MAX_PACKET_LEN ? fileSize - sentSoFar : MAX_PACKET_LEN);
+		size_t read = fread(buffer + 1, 1, amountToSend, fp);
 		if (read == -1){
 			fprintf(getLog(), "ERROR: An Error occured reading %s\n", fileName);
 			closeProgram(true, false);
@@ -343,6 +345,7 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, int 
 		//		printf("%s\n", padPath);
 		clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
 		offset += read;
+
 
 		int sent = sendAll(sock, buffer, read + 1);
 		if (sent == -1){
@@ -444,6 +447,7 @@ int main (int argc, char * argv[]){
 		int check = sendFile(opts->address, opts->ports, argv[i], opts->padPath, sock);
 		if (check == -1) fprintf(stdout, "File was a directory!\n");
 		else if (!checkServerResponse(sock)) {
+			fprintf(stderr, "Server reported invalid data receiving... trying again...\n");
 			fprintf(getLog(), "WARNING: Server did not receive correct data.  Trying again...\n");
 			i--; 
 		}

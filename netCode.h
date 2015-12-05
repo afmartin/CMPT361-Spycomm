@@ -26,6 +26,7 @@ AWESOME HEADER BLOCK
 #define MAX_FILE_LENGTH_AS_STRING 21 
 #define AUTHENTICATION_LENGTH 16
 
+#define A_TYPE 'A'
 #define T_TYPE 'T'
 #define F_TYPE 'F'
 #define D_TYPE 'D'
