@@ -232,8 +232,9 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
 	memset(filename, 0, FILENAME_LEN);
 	findFilename(filename, digest, NULL);
 
-	FILE * f = fopen(filename, "rb");
+	FILE * f = fopen(filename, "r");
 	if (f == NULL) {
+		fprintf(getLog(), "ERROR: Could not load specified OTP: %s\n", strerror(errno));
 		*size = 0; // otp not found
 	} else {
 		int fd = fileno(f);

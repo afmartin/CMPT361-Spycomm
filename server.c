@@ -178,7 +178,7 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 		temp[position] = '\0'; 
 
 		//Copy the string into the struct
-		strcpy(info->filename, temp);
+		strncpy(info->filename, temp,  MAX_FILE_NAME);
 
 		//Skip over the null terminator and reset the position
 		ptr++;
@@ -214,7 +214,7 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 		temp[position] = '\0';
 
 		//Copy the string into the struct
-		strcpy(info->padID, temp);
+		strncpy(info->padID, temp, MD5_STRING_LENGTH);
 
 		// Copy checksum into the struct
 		ptr++;
@@ -229,7 +229,7 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 	
 	// Check if we have the pad, if we have enough room
 	getOffsetAndSize(info->padID, padOffset, padSize);
-	
+
 	if (padSize == 0) {
 		// if pad size is zero, then the pad is not valid!
 		sendError(cd, PAD_INVALID);
