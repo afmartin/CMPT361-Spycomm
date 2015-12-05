@@ -12,6 +12,10 @@ Description:
 #define _FILE_H
 #define MAX_PACKET_LEN 512
 
+long long int getFileSizeFromFilename(char * filename);
+/* This function takes a filename as parameters and returns
+ * the size of the file in bytes. */ 
+
 long long int getFileSize(int fd);
 /* The function takes a file descriptor as parameters and
    returns the size of the file in bytes. */

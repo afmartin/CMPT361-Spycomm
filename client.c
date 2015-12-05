@@ -228,7 +228,7 @@ long long int initiateFileTransfer(int sock, char * fileName, char * length, cha
 	
 	// Compute digest of entire file.
 	uint8_t fileDigest[MD5_DIGEST_BYTES]; 
-	getMd5DigestFromFile(fileName, fileDigest);
+	getMd5DigestFromFile(fileName, fileDigest, atoll(length));
 	
 	
 	//Get the length of the initialization packet
@@ -405,6 +405,8 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, char
 		fprintf(stdout, "File is empty!");
 		return -1;
 	}	
+
+	fprintf(getLog(), "INFO: Sending file: %s of length %sB\n", fileName, fileLenAsString); 
 	
 	//Sends the initialization data and received the offset to use
 	long long int offset = initiateFileTransfer(sock, fileName, fileLenAsString, padPath, digestStr);
@@ -431,7 +433,7 @@ int sendFile (char * address, char * port, char * fileName, char * padPath, char
 		}
 		
 		//Encrypt the buffer and update the pad offset
-		clientCrypt(buffer, 1, padPath, offset, MAX_PACKET_LEN);
+		clientCrypt(buffer, 1, padPath, offset, read + 1);
 		offset += read;
 
 		//Sent all the data and check for errors
@@ -538,7 +540,7 @@ int main (int argc, char * argv[]){
 	// Compute string representation of the pad digest.
 	fprintf(stdout, "Calculating pad digest\n");
 	uint8_t digest[MD5_DIGEST_BYTES];	
-	getMd5DigestFromFile(opts->padPath, digest);
+	getMd5DigestFromFile(opts->padPath, digest, getFileSizeFromFilename(opts->padPath));
 	char digestStr[MD5_STRING_LENGTH];
 	convertMd5ToString(digestStr, digest);
 

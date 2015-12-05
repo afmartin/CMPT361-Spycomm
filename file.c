@@ -19,6 +19,17 @@ files that are used in server.c and client.c
 #include "file.h"
 #include "log.h"
 
+long long int getFileSizeFromFilename(char * filename) {
+	FILE * f = fopen(filename, "r");
+	if (f == NULL) {
+		fprintf(getLog(), "WARNING: Could not open file: %s\n", filename);
+		return 0;
+	}
+	long long int size = getFileSize(fileno(f));
+	fclose(f);
+	return size;
+}
+
 long long int getFileSize(int fd) {
   //initialize stat structure from sys/stat.h
   struct stat buf;

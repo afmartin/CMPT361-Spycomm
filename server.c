@@ -535,7 +535,7 @@ void * worker(void * arg) { //this is the function that threads will call
 					// an acknowledgement.
 					if (left == 0) {
 						uint8_t checksum[MD5_DIGEST_BYTES];
-						getMd5DigestFromFile(fileDest, checksum);
+						getMd5DigestFromFile(fileDest, checksum, getFileSizeFromFilename(fileDest));
 						if (compareMd5Digest(checksum, info->checksum)) {
 							fprintf(getLog(), "INFO: %s checksum matches... Success.\n", info->filename);
 							uint8_t ack = A_TYPE;
