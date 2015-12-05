@@ -28,6 +28,7 @@ void getMd5DigestFromFile(char * filename, uint8_t * digest) {
     }
     fread(data, sizeof(uint8_t), filesize, f);
     getMd5Digest(data, filesize, digest);
+	free(data);
 }
 
 bool compareMd5Digest(uint8_t * a, uint8_t * b) {

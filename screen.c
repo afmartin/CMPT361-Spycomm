@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "screen.h"
 #include <unistd.h>
+#include "screen.h"
 
 #define TEST 1
+#define MAX_FILE_NAME_LENGTH 12
 
 void drawBox(Box box){
   
@@ -26,9 +27,13 @@ void drawBox(Box box){
 }
  
 void connectedToDisplay(Box box, char * clientAddr, char * fileName){
-  
    mvprintw(box.row+1, box.column+2, "Connected to: %s", clientAddr);
-   mvprintw(box.row+2, box.column+2, "Downloading file:  '%s'", fileName);
+   if (MAX_FILE_NAME_LENGTH > strlen(fileName)) {
+   	 mvprintw(box.row+2, box.column+2, "Downloading file: '%s'", fileName);
+   } else {
+   	 mvprintw(box.row+2, box.column+2, "Downloading file: '%.*s...'", MAX_FILE_NAME_LENGTH - 3, fileName);
+   }
+
    refresh();
 }
 

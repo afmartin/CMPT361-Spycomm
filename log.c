@@ -25,9 +25,12 @@ void initLog(char * f) {
 		fprintf(stderr, "ERROR: Log file could not be opened, will not log.");
 		perror("fopen");
 	} else {
+		// Ref: http://stackoverflow.com/questions/8622735/fopen-fprintf-dosnt-write-to-file-only-after-closing-it
+		setvbuf(log, NULL, _IOLBF, 0); // Have it save to disk after every line is written
 		time_t t;
 		time(&t);
-		fprintf(log, "LOG: Started at %s\n", ctime(&t));
+		// Note: ctime has a new line character at the end
+		fprintf(log, "LOG: Started at %s", ctime(&t));
 	}
 }
 

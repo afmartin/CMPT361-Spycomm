@@ -29,10 +29,11 @@ and several macros used.
 #define TRUE 1
 #define FALSE 0
 #define MAXLEN 512
-#define MAX_FILE_NAME 64
+#define MAX_FILE_NAME 128
 #define MAX_FILE_LENGTH_AS_STRING 21 
 #define AUTHENTICATION_LENGTH 16
 
+#define A_TYPE 'A'
 #define T_TYPE 'T'
 #define F_TYPE 'F'
 #define D_TYPE 'D'

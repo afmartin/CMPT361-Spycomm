@@ -232,8 +232,9 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
 	memset(filename, 0, FILENAME_LEN);
 	findFilename(filename, digest, NULL);
 
-	FILE * f = fopen(filename, "rb");
+	FILE * f = fopen(filename, "r");
 	if (f == NULL) {
+		fprintf(getLog(), "ERROR: Could not load specified OTP: %s\n", strerror(errno));
 		*size = 0; // otp not found
 	} else {
 		int fd = fileno(f);
@@ -257,7 +258,7 @@ void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  off
 
 void setOffset(char * digest, long long int offset) {
 	// Ref for Mutex from Dr. Nicholas M. Boer's CMPT 360 Lock Lecture Slides
-	pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	pthread_mutex_lock (&lock);
 
 	int position = findPosition(digest);
