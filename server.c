@@ -453,6 +453,19 @@ void makeDataFolder(char * folder) {
 	}
 }
 
+/**
+ * closeInfoFile
+ *
+ * Close a file handle after writing that the connection ended prematurely.
+ *
+ * Args:
+ * FILE * f - file handle
+ */
+void closeInfoFile(FILE * f) {
+	fprintf(f, "ERROR: Connection closed prematurely.");
+	fclose(f);
+}
+
 void * worker(void * arg) { //this is the function that threads will call
 
 	threadArgs * ta = (threadArgs *) arg;
@@ -485,10 +498,31 @@ void * worker(void * arg) { //this is the function that threads will call
 		strncat(folder, t, MAX_FOLDER_LEN);
 		makeDataFolder(folder);	// makeDataFolder will modify folder.
 		strcat(folder, "/");
+
+		// Create info file 
+		char infoFileName[MAX_FOLDER_LEN];
+		memset(infoFileName, 0, MAX_FOLDER_LEN);
+		strncpy(infoFileName, folder, MAX_FOLDER_LEN);
+		strncat(infoFileName, "info.txt", MAX_FOLDER_LEN);
+		FILE * infoFile = fopen(infoFileName, "w");
+		if (infoFile == NULL) {
+			// if opening the file fails, it's most likely a permission problem or
+			// something wrong with the save directory.  Therefore to prevent
+			// further problems we should end this session with client
+			// and hope it's a problem with what date time stamp was used.
+			fprintf(getLog(), "WARNING: Could not open %s for writing.  Closing connection.\n", infoFileName);
+			sendError(cd, UNSPEC_ERROR);
+			close(cd);
+			continue;
+		}
+
+		fprintf(infoFile, "Sent from %s at time %s\n", clientAddrString, t);
+
 		while (cd) { // full file transfer loop, allows for multiple file transactions
 			fileInfo *info = (fileInfo *)malloc(sizeof(fileInfo)); 
 			if (info == NULL) {
 				fprintf(getLog(), "ERROR: Memory allocation failure: %s\n", strerror(errno));
+				closeInfoFile(infoFile);
 				sendError(cd, UNSPEC_ERROR);
 				closeProgram(true, true);
 			}
@@ -507,7 +541,15 @@ void * worker(void * arg) { //this is the function that threads will call
 				memset(fileDest, 0, MAX_FOLDER_LEN);
 				strncpy(fileDest, folder, MAX_FOLDER_LEN);
 				strncat(fileDest, (*info).filename, MAX_FOLDER_LEN);
+
+				// To prevent server info file being overwritten, add .txt to any
+				// file sent by client that is called "info.txt"
+				if (strcmp(fileDest, infoFileName) == 0) {
+					strncat(fileDest, ".txt", MAX_FOLDER_LEN);
+				}
+
 				fprintf(getLog(), "INFO: Saving file to: %s\n", fileDest);
+				fprintf(infoFile, "%s sent with OTP: %s\n", fileDest, info->padID);
 
 				pthread_mutex_lock(&mutexlock);
 				clearBox(ta->box);
@@ -551,6 +593,7 @@ void * worker(void * arg) { //this is the function that threads will call
 						int didRecv = recv(cd, packet, 1, 0);
 						if (didRecv == -1){
 							fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
+							closeInfoFile(infoFile);
 							sendError(cd, UNSPEC_ERROR);
 							close(cd);
 							pthread_exit(NULL);
@@ -561,6 +604,7 @@ void * worker(void * arg) { //this is the function that threads will call
 						int didRecv = recvAll(cd, get + 1, packet);
 						if (didRecv == -1){
 							fprintf(getLog(), "ERROR: Receive failed, ending connection: %s\n", strerror(errno));
+							closeInfoFile(infoFile);
 
 							sendError(cd, UNSPEC_ERROR);
 							close(cd);
@@ -568,6 +612,7 @@ void * worker(void * arg) { //this is the function that threads will call
 						}
 						if (didRecv != get + 1){
 							fprintf(getLog(), "ERROR: Receive unexpected amount of data, ending connection: %s\n", strerror(errno));
+							closeInfoFile(infoFile);
 							sendError(cd, UNSPEC_ERROR);
 							close(cd);
 							pthread_exit(NULL);
@@ -591,13 +636,16 @@ void * worker(void * arg) { //this is the function that threads will call
 					}
 					else {
 						fprintf(getLog(), "ERROR: Received erroneous data!\n");
+						closeInfoFile(infoFile);
 						close(cd);
 						break;
 					}
 					memset(packet, 0, sizeof(packet));
 				}    
 			} else {
+				fclose(infoFile);
 				close(cd);
+				cd = 0;
 				break;
 			}		
 			free(info);
