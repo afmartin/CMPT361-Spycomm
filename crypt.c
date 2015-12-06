@@ -40,6 +40,7 @@ Description: Functions for dealing with OTPs and Offsets.
 typedef struct _DigestMap {
 	long long int offset;
 	char digest[MD5_STRING_LENGTH];
+	bool inUse;
 } DigestMap;
 
 static DigestMap ** map;
@@ -149,6 +150,7 @@ static void addToMap(char * digest) {
 
 	memcpy(map[map_count]->digest, digest, MD5_STRING_LENGTH);
 	map[map_count]->offset = 0;
+	map[map_count]->inUse = false;
 
 	map_count++;
 }
@@ -298,3 +300,29 @@ void loadOffsets() {
 	fclose(f);
 }
 
+bool setOTPInUse(char * digest) {
+	// Ref for Mutex from Dr. Nicholas M. Boer's CMPT 360 Lock Lecture Slides
+	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_lock (&lock);
+	bool returnValue;
+	int pos = findPosition(digest);
+	if (pos >= 0) {
+		if (map[pos]->inUse == true) {
+			returnValue = false;
+		} else {
+			map[pos]->inUse = true;
+			returnValue = true;
+		}
+	} else {
+		returnValue = false;
+	}	
+	pthread_mutex_unlock (&lock);
+	return returnValue;
+}
+
+void setOTPDone(char * digest) {
+	int pos = findPosition(digest);
+	if (pos >= 0) {
+		map[pos]->inUse = false;
+	}
+}

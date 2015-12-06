@@ -200,6 +200,10 @@ void printErrorThenExit(uint8_t errorCode){
 			fprintf(getLog(), "ERROR: The server indicates that unspecified error occurred\n");
 			closeProgram(true, false);
 			break;
+		case IN_USE:
+			fprintf(getLog(), "ERROR: The server indicates that the pad is in use\n");
+			closeProgram(true, false);
+			break;
 		default:
 			fprintf(getLog(), "WARNING: UNKNOWN ERROR CODE RECEIVED\n");
 			closeProgram(true, false);

@@ -303,7 +303,14 @@ int initFileTransfer(int cd, fileInfo *info, long long int * padSize, long long 
 		// Not enough room in pad
 	} else if (info->fileLen > (*padSize - (*padOffset + AUTHENTICATION_LENGTH))) {
 		sendError(cd, NO_ROOM);
-		fprintf(getLog(), "ERROR: Not enough padd offset for file.    Needed: %lli | Have: %lli\n", info->fileLen, *padOffset);
+		fprintf(getLog(), "ERROR: Not enough pad offset for file.    Needed: %lli | Have: %lli\n", info->fileLen, *padOffset);
+		return FALSE;
+	}
+
+	// Set OTP in use
+	if (!setOTPInUse(info->padID)) {
+		sendError(cd, IN_USE);
+		fprintf(getLog(), "ERROR: Pad is already in use.\n");
 		return FALSE;
 	}
 
@@ -642,6 +649,7 @@ void * worker(void * arg) { //this is the function that threads will call
 					}
 					memset(packet, 0, sizeof(packet));
 				}    
+				setOTPDone(info->padID);
 			} else {
 				fclose(infoFile);
 				close(cd);

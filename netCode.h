@@ -46,6 +46,7 @@ and several macros used.
 #define AUTH_NO_MATCH 4  // close connection
 #define CON_HANG 5 // close connection
 #define UNSPEC_ERROR 6 // close connection
+#define IN_USE 7 // close connection
 
 int recvAll (int sock, int amount, uint8_t * dest);
 

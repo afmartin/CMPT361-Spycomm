@@ -10,7 +10,32 @@ Description: Functions for dealing with OTPs and Offsets.
 #ifndef _CRYPT_H_ 
 #define _CRYPT_H_
 
+#include <stdbool.h>
 #include <stdint.h> // for uint8_t
+
+/**
+ * setOTPInUse
+ *
+ * Sets the status of the OTP to in use if it is already
+ * not in use.
+ *
+ * Args:
+ * char * digest - the digest of the OTP
+ *
+ * Returns:
+ * Boolean value of whether or not we can use
+ */
+bool setOTPInUse(char * digest);
+
+/**
+ * setOTPDone
+ *
+ * Sets the status of the OTP to not in use.
+ *
+ * Args:
+ * char * digest - the digest of the OTP
+ */
+void setOTPDone(char * digest);
 
 /** 
  * getOffsetAndSize
