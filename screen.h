@@ -1,4 +1,15 @@
-
+/*                                                                       
+                                                                          
+##########################################################################
+######                                                                    
+CMPT 361 - Assignment 3                                                   
+                                                                          
+Group 4: Nick, John, Alex, Kevin                                          
+November 6th, 2015                                                        
+Filename: screen.h                                                        
+Description: Functions for implementing the UI in the spycommd program    
+#########################################################################\
+######                                                                     */
 #include <ncurses.h>
 #define MAXBOXES 8
 #define HEIGHT 7
