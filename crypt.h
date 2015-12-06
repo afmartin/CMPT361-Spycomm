@@ -70,7 +70,7 @@ void getOffsetAndSize(char * digest, long long int * offset, long long int * siz
 void serverCrypt(uint8_t * data, int data_pos, char * digest, long long int  offset, long long int len);
 
 /**
- * clinetCrypt
+ * clientCrypt
  *
  * Either encrypts or decrypts an array of bytes by a one time pad.
  *
