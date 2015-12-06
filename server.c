@@ -591,6 +591,8 @@ void * worker(void * arg) { //this is the function that threads will call
 							sendAll(cd, &ack, 1);	
 						} else {
 							fprintf(getLog(), "WARNING: %s checksum failed... asking client to retry.\n", info->filename);
+							// Deletes the file as incorrect
+							remove(fileDest);
 							sendError(cd, DATA_INVALID);
 						}
 						break;
