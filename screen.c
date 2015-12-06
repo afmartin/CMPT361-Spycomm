@@ -1,3 +1,14 @@
+/*
+######################################################################
+CMPT 361 - Assignment 3
+Group 4: Nick, John, Alex, Kevin
+December 5th, 2015
+Filename: screen.c
+Description: Contains functions relevant to maintaining the user
+interface for server.c
+######################################################################
+*/
+
 #include <stdio.h>
 #include <ncurses.h>
 #include <stdlib.h>
@@ -108,49 +119,3 @@ void displayHandshakeInfo(Box box, char * clientAddr){
   mvprintw(box.row+3, box.column+5, "%s", clientAddr); 
 }
 
-/* int main(void){ */
-
-/*   initscr(); */
-/*   noecho(); */
-/*   Box boxes[MAXBOXES]; */
-/*   int y = 3; */
-/*   for (int i = 0; i< MAXBOXES; i+=2){ */
-/*     Box box1 = {.boxNo = i, .progress = 0, .state = 0, */
-/* 		.row = y, */
-/* 		.column = COLUMN1}; */
-/*     Box box2 = {.boxNo = i+1, .progress = 0, .state = 0, */
-/* 		.row = y, */
-/* 		.column = COLUMN2}; */
-/*     boxes[i] = box1; */
-/*     boxes[i+1] = box2; */
-/*     y += HEIGHT+1; */
-/*   } */
-/*   /\* for (int i = 0; i < MAXBOXES; i++){ *\/ */
-/*   /\*   Box box = {.boxNo = i, .progress = 0, .state = 0, *\/ */
-/*   /\* 		// get the top left corner reference point *\/ */
-/*   /\* 	       .row = (1 + (HEIGHT+1) * (i%4))}; *\/ */
-/*   /\*   if (i % 2 == 0) *\/ */
-/*   /\*     box.column = COLUMN1; *\/ */
-/*   /\*   else  *\/ */
-/*   /\*     box.column = COLUMN2; *\/ */
-/*   /\*   boxes[i] = box; *\/ */
-/*   /\* } *\/ */
-/*   for (int i = 0; i < 8; i++) */
-/*     drawBox(boxes[i]); */
-/*   displayWaitingForConnection(boxes); */
-/*   connectedToDisplay(boxes[1], "192.158.0.92", "file.c"); */
-/*   connectedToDisplay(boxes[3], "192.168.32.1", "compress.c"); */
-/*   connectedToDisplay(boxes[4], "192.168.0.94", "hello.txt"); */
-
-/*   for (int i = 0; i < TEST; i++){ */
-/*     //sleep(1); */
-/*     progressBar(&boxes[1], TEST); */
-/*     progressBar(&boxes[3], TEST); */
-/*     progressBar(&boxes[4], TEST); */
-
-/*   } */
-/*   //displayWaitingForConnection(boxes); */
-/*   //displayHandshakeInfo(boxes[0], "192.168.0.92"); */
-/*   getch(); */
-/*   endwin(); */
-/* } */
