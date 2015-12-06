@@ -645,8 +645,7 @@ void * worker(void * arg) { //this is the function that threads will call
 						padOffset += get;
 						setOffset(info->padID, padOffset);
 
-						//copy the data from the packet into the fileContents
-						//And then increment the pointer
+						
 						writeToFile(fileDest, packet + 1, get);
 						pthread_mutex_lock(&mutexlock);
 						progressBar(&(ta->box), iterations);
@@ -750,8 +749,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	fprintf(getLog(), "INFO: Killing threads...\n");
-	// At this point in time, it appears the program will randomly exit prematurely when exiting threads.
-	// so we're not using closeProgram 
+	 
 	fclose(getLog());
 	endwin();
 	for (i = 0; i < MAX_THREAD; i++) {
