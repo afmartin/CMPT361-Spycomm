@@ -1,11 +1,12 @@
-/*j############################################################
+/*
+###################################################################
 CMPT 361 - Assignment 3
 Group 4: Nick, John, Alex, Kevin
 November 9th, 2015
 Filename: file.c
 Description: Contains various functions for writing and receiving
 files that are used in server.c and client.c 
-#############################################################
+###################################################################
 */
 
 #include <stdio.h>
