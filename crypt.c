@@ -134,7 +134,7 @@ static void addToMap(char * digest) {
 	} else {
 		// We make a new pointer as things can go weird when it fails and pointer 
 		// to original is assigned.
-		DigestMap ** new  = realloc(map, sizeof(DigestMap *) * map_count);
+		DigestMap ** new  = realloc(map, sizeof(DigestMap *) * (map_count + 1));
 		if (new == NULL) {
 			fprintf(getLog(), "ERROR: Could not allocate room for digest map\n");
 			closeProgram(true, true);
