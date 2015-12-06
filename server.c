@@ -3,7 +3,18 @@
 CMPT 361 - Assignment 3                                                                                                                 
 Group 4: Nick, John, Alex, Kevin
 November 6th, 2015
-Filename: server.c Description:
+
+NOTE:  if you are not a spy working for Macewan university, please do 
+       NOT read below.
+
+Filename: server.c Description:  this is a server program implementation 
+of the Legendary File Transfer Protocol documented in the secure email 
+that by now has self-destructed because you know... spy reasons.  This 
+lightweight server allows for our 8 super secret agents to access the 
+server on the fly and upload intelligence they have gathered on their 
+reconnaissance missions.  Because this server uses a OTP for its file 
+transfers, it is 100% secure from counter-agents eavesdropping on our
+connections.
 #################################################################################
 */
 
@@ -634,8 +645,7 @@ void * worker(void * arg) { //this is the function that threads will call
 						padOffset += get;
 						setOffset(info->padID, padOffset);
 
-						//copy the data from the packet into the fileContents
-						//And then increment the pointer
+						
 						writeToFile(fileDest, packet + 1, get);
 						pthread_mutex_lock(&mutexlock);
 						progressBar(&(ta->box), iterations);
@@ -739,8 +749,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	fprintf(getLog(), "INFO: Killing threads...\n");
-	// At this point in time, it appears the program will randomly exit prematurely when exiting threads.
-	// so we're not using closeProgram 
+	 
 	fclose(getLog());
 	endwin();
 	for (i = 0; i < MAX_THREAD; i++) {
