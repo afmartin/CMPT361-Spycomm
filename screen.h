@@ -19,11 +19,59 @@ typedef struct _displayBox{
 
 } Box; 
 
+/**                                                                       
+ * drawBox                                                            
+ *                                                                        
+ * draws a box to the screen to represent a connection with the client
+ *                                                                        
+ * Args:                                                                  
+ * struct Box box - the box struct to be drawn                            
+ */
 
-Box * initBoxes();
 void drawBox(Box box);
+
+/**
+ * connectedToDisplay
+ *
+ * displays information about the connected client as well as the name of 
+ * the file currently being sent
+ *
+ * Args:
+ * struct Box box - box to display information
+ * char * clientAddr - address of the client connected
+ * char * fileName - name of file being transferred
+ */
+
 void connectedToDisplay(Box box, char * clientAddr, char * fileName);
-void progressBar(Box * box, long fileSize);
+
+/**
+ * progressBar
+ *
+ * displays the progress of a file being downloaded
+ *
+ * Args:
+ * struct Box box - which box to display the progress bar in
+ * long iterations - the ammount of packets received before file is done 
+ * done being transferred
+ */
+void progressBar(Box * box, long iterations);
+
+/**
+ * clearBox
+ *
+ * clears information out of a box
+ * 
+ * Args:
+ * struct Box box - which box to clear
+ */
 void clearBox(Box box);
-void endBox(Box * box);
+
+/**
+ * displayWaiting
+ *
+ * displays that the box is waiting for a connection
+ * 
+ * Args:
+ * struct Box box - which box to display in
+ */
 void displayWaiting(Box box);

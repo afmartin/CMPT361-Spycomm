@@ -1,3 +1,13 @@
+/*
+################################################################################
+CMPT 361 - Assignment 3 
+
+Group 4: Nick, John, Alex, Kevin
+November 6th, 2015
+Filename: screen.c
+Description: Functions for implementing the UI in the spycommd program
+################################################################################
+ */
 #include <stdio.h>
 #include <ncurses.h>
 #include <stdlib.h>
