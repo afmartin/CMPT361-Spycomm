@@ -19,6 +19,10 @@ Description: Functions for dealing with OTPs and Offsets.
  * Sets the status of the OTP to in use if it is already
  * not in use.
  *
+ * NOTE: Only call this if you are sure OTP exists.
+ * If this is called and OTP doesn't exist, it will
+ * be added to the map.
+ *
  * Args:
  * char * digest - the digest of the OTP
  *

@@ -314,7 +314,9 @@ bool setOTPInUse(char * digest) {
 			returnValue = true;
 		}
 	} else {
-		returnValue = false;
+		addToMap(digest);
+		map[findPosition(digest)]->inUse = true;
+		returnValue = true;
 	}	
 	pthread_mutex_unlock (&lock);
 	return returnValue;
