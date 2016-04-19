@@ -1,9 +1,9 @@
 #SPYCOMM AND SPYCOMMD
-##CMPT 361 - Introduction to Networks
-##Instructor: Dr. Nicholas M. Boers
-##Assignment 3
-##MacEwan University
-##Group 4: Nick, John, Alex, Kevin
+###CMPT 361 - Introduction to Networks
+###Instructor: Dr. Nicholas M. Boers
+###Assignment 3
+###MacEwan University
+###Group 4: Nick, John, Alex, Kevin
 
 ###Purpose
 
