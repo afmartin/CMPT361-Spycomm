@@ -4,7 +4,7 @@
 ###Assignment 3
 ###MacEwan University
 ###Group 4: Nick, John, Alex, Kevin
-
+<hr>
 ###Purpose
 
 Spycomm and spycommd are a pair of programs meant for secure file transmission.  It securely transfers files by encrypting and decrypting files using an OTP (one time pad) that both the client (spycomm) and server (spycommd) have.  The OTP shall never be re-used, and the server manages what was used.
